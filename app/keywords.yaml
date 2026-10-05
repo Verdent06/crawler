@@ -1,0 +1,79 @@
+positive:
+  acfr: 40
+  cafr: 40
+  "annual comprehensive financial": 45
+  "comprehensive annual financial": 45
+  "financial report": 30
+  budget: 35
+  "adopted budget": 40
+  "proposed budget": 35
+  "operating budget": 35
+  "capital budget": 30
+  finance: 25
+  financial: 20
+  treasurer: 25
+  treasury: 20
+  "finance director": 40
+  "chief financial": 35
+  cfo: 30
+  controller: 25
+  "staff directory": 20
+  directory: 10
+  contact: 12
+  "contact us": 15
+  government: 18
+  departments: 12
+  administration: 10
+  "administrative services": 22
+  audit: 18
+  auditor: 18
+  documents: 12
+  reports: 12
+  "annual report": 22
+  pdf: 8
+
+negative:
+  parking: -25
+  trash: -25
+  recycle: -20
+  "water bill": -30
+  "solid waste": -25
+  jobs: -20
+  careers: -20
+  calendar: -20
+  events: -15
+  privacy: -30
+  "terms of": -25
+  facebook: -40
+  twitter: -40
+  instagram: -40
+  youtube: -40
+  linkedin: -35
+  "park classes": -25
+  scholarship: -15
+  election: -10
+  police: -10
+  ticket: -20
+
+document_extensions:
+  - .pdf
+  - .xlsx
+  - .xls
+  - .docx
+  - .doc
+
+document_boost: 15
+contact_signals:
+  - "mailto:"
+  - "@"
+  - phone
+  - email
+  - "e-mail"
+  - "tel:"
+  - "staff directory"
+  - directory
+
+follow_threshold: 8
+result_threshold: 20
+uncertain_low: 15
+uncertain_high: 35

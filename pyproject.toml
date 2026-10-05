@@ -1,0 +1,16 @@
+[project]
+name = "pursuit-link-scraper"
+version = "0.1.0"
+description = "High-value link scraper for public-institution finance pages"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+addopts = ["-m", "not live"]
+markers = [
+    "live: hits real websites; skipped by default",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
