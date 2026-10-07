@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 from app.crawl import CrawlConfig, CrawlRunner
 from app.db import Database
-from app.llm import LlamaClient
+from app.llm import LlmClient
 
 SAMPLES = [
     "https://www.a2gov.org/",
@@ -57,7 +57,7 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     db = Database(out_dir / "live_samples.db")
     config = CrawlConfig(max_pages=8, max_depth=2, max_documents=3)
-    runner = CrawlRunner(db, llm=LlamaClient(base_url=""))
+    runner = CrawlRunner(db, llm=LlmClient(base_url=""))
     results = []
     try:
         for seed in SAMPLES:

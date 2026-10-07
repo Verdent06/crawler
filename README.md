@@ -1,8 +1,8 @@
 # High-Value Link Scraper
 
-Crawl a public institution homepage, rank links that look like finance documents or finance contacts, store the results in SQLite, and serve them through a small FastAPI API.
+Crawl a public institution homepage, rank links that look like finance documents or finance contacts, store the results in SQLite, and serve them through a small FastAPI API. A React UI in [`frontend/`](frontend/) starts scrapes and shows live results.
 
-Targets: ACFR/CAFR and budget documents, plus contacts such as a Finance Director. Keyword rules do the first pass. An optional Llama model (via Ollama) can re-rank uncertain links, help bind names to titles, and second-guess PDF confirmation.
+Targets: ACFR/CAFR and budget documents, plus contacts such as a Finance Director. Keyword rules do the first pass. An optional model, called through an OpenAI-compatible API, can re-rank uncertain links, help bind names to titles, and second-guess PDF confirmation.
 
 ## Setup
 
@@ -19,7 +19,16 @@ uv venv .venv
 uv pip install -r requirements.txt
 ```
 
-Run the API:
+Frontend:
+
+```bash
+cd frontend
+npm install
+```
+
+### Run locally (two terminals)
+
+Terminal 1 — API:
 
 ```bash
 source .venv/bin/activate
@@ -27,14 +36,24 @@ export PYTHONPATH=.
 uvicorn app.main:app --reload --port 8000
 ```
 
-Optional Llama (Ollama):
+Terminal 2 — UI:
 
 ```bash
-export OLLAMA_URL=http://127.0.0.1:11434
-export OLLAMA_MODEL=llama3.1:8b
+cd frontend
+npm run dev
 ```
 
-If `OLLAMA_URL` is unset, the scraper uses keyword rules only.
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api/*` to the FastAPI server. CORS is also enabled for the Vite origin as a backup.
+
+Optional model (any OpenAI-compatible chat API):
+
+```bash
+export LLM_API_KEY=sk-...
+export LLM_BASE_URL=https://api.openai.com/v1   # optional; this is the default
+export LLM_MODEL=gpt-4o-mini                    # optional
+```
+
+`OPENAI_API_KEY` is accepted if `LLM_API_KEY` is unset. Point `LLM_BASE_URL` at another host (Groq, OpenRouter, Together, and similar) when that host speaks the same chat-completions API. If neither key is set, the scraper uses keyword rules only. A model score on an uncertain link can raise or lower that link in the crawl.
 
 ## How ranking works
 
@@ -53,7 +72,7 @@ flowchart LR
   runner --> fetch[Fetcher]
   fetch --> score[KeywordScorer]
   score --> frontier[Frontier]
-  score --> llm[OptionalLlama]
+  score --> llm[OptionalModel]
   score --> pdf[PdfCheck]
   runner --> db[SQLite]
   api --> db
@@ -94,7 +113,7 @@ erDiagram
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/health` | Process health and whether Llama answered |
+| `GET` | `/health` | Process health and whether the model API answered |
 | `POST` | `/scrape` | Start a background crawl |
 | `GET` | `/sites` | List crawl jobs |
 | `GET` | `/sites/{id}` | Job detail with links, contacts, documents |
@@ -160,7 +179,7 @@ What that would look like:
 2. Canonical URL dedup before fetch
 3. Separate fetch and parse workers
 4. Postgres for metadata, object storage for raw HTML/PDF bytes
-5. Keyword scoring on every link; Llama only for uncertain scores, contact binding, and PDF second opinions, with template caching per CMS
+5. Keyword scoring on every link; a model only for uncertain scores, contact binding, and PDF second opinions, with template caching per CMS
 
 ```mermaid
 flowchart TB
@@ -168,24 +187,43 @@ flowchart TB
   queue --> fetchers[FetchWorkers]
   fetchers --> parse[ParseWorkers]
   parse --> heuristic[KeywordScore]
-  heuristic -->|uncertain| llm[LlamaShortlist]
+  heuristic -->|uncertain| llm[ModelShortlist]
   heuristic --> store[(PostgresPlusObjectStore)]
   llm --> store
+```
+
+## Frontend
+
+The UI is a Vite + React + TypeScript app:
+
+- Paste a seed URL, set max pages/depth, start a scrape
+- Polls `GET /sites/{id}` while the job is running
+- Tabs for ranked links (filterable), contacts, and document checks
+- Distinct empty / crawling / failed / zero-result states
+- Health badge for API up and whether the model API is available
+
+```mermaid
+flowchart LR
+  ui[ReactUI] -->|"POST /api/scrape"| api[FastAPI]
+  ui -->|"poll GET /api/sites/id"| api
+  ui -->|GET /api/health| api
+  api --> db[SQLite]
 ```
 
 ## Project layout
 
 ```
 app/
-  main.py          FastAPI routes
+  main.py          FastAPI routes + CORS
   crawl.py         Frontier crawl loop
   fetch.py         HTTP, robots, SSRF guards
   score.py         Keyword scoring
   keywords.yaml    Editable weights
   extract.py       Links and contacts
   pdf_check.py     First-page document confirmation
-  llm.py           Optional Ollama client
+  llm.py           Optional OpenAI-compatible model client
   db.py            SQLite schema and queries
+frontend/          React UI (Vite + TypeScript)
 scripts/run_live_samples.py
 tests/
 ```

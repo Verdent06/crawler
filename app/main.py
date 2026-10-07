@@ -8,13 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, HttpUrl
 
 from app import __version__
 from app.crawl import CrawlConfig, CrawlRunner
 from app.db import Database
 from app.fetch import UnsafeURLError, assert_public_url, registrable_domain
-from app.llm import LlamaClient
+from app.llm import LlmClient
 
 DATA_DIR = Path(
     os.environ.get(
@@ -26,9 +27,21 @@ DB_PATH = Path(os.environ.get("SCRAPER_DB_PATH", DATA_DIR / "scraper.db"))
 app = FastAPI(
     title="High-Value Link Scraper",
     description=(
-        "Find finance contacts and ACFR/budget documents on public institution sites."
+        "Find finance contacts and ACFR/budget documents on public institution sites. "
+        "The React UI lives in /frontend and proxies to this API during local development."
     ),
     version=__version__,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 db = Database(DB_PATH)
@@ -46,7 +59,7 @@ class ScrapeRequest(BaseModel):
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    llm = LlamaClient()
+    llm = LlmClient()
     return {
         "status": "ok",
         "version": __version__,

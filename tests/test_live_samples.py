@@ -6,7 +6,7 @@ import pytest
 
 from app.crawl import CrawlConfig, CrawlRunner
 from app.db import Database
-from app.llm import LlamaClient
+from app.llm import LlmClient
 
 SAMPLES = [
     "https://www.a2gov.org/",
@@ -20,7 +20,7 @@ SAMPLES = [
 @pytest.mark.parametrize("seed", SAMPLES)
 def test_live_sample_does_not_crash(tmp_path, seed: str):
     db = Database(tmp_path / "live.db")
-    runner = CrawlRunner(db, llm=LlamaClient(base_url=""))
+    runner = CrawlRunner(db, llm=LlmClient(base_url=""))
     try:
         site_id = runner.run(
             seed, CrawlConfig(max_pages=3, max_depth=1, max_documents=1)

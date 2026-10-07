@@ -7,7 +7,7 @@ import httpx
 from app.crawl import CrawlConfig, CrawlRunner
 from app.db import Database
 from app.fetch import Fetcher
-from app.llm import LlamaClient
+from app.llm import LlmClient
 
 
 SITE = {
@@ -56,7 +56,7 @@ def test_crawl_finds_budget_link_and_contact(db: Database):
         resolve_check=lambda url: None,
     )
     runner = CrawlRunner(
-        db, fetcher=fetcher, llm=LlamaClient(base_url="")
+        db, fetcher=fetcher, llm=LlmClient(base_url="")
     )
     site_id = runner.run(
         "https://example.gov/",
@@ -74,3 +74,56 @@ def test_crawl_finds_budget_link_and_contact(db: Database):
         (c.get("email") == "jane@example.gov") or (c.get("title") and "finance" in c["title"].lower())
         for c in site["contacts"]
     )
+
+
+class _DropMiddleLinks:
+    enabled = True
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def rerank_link(self, **kwargs: object) -> dict[str, object]:
+        self.calls += 1
+        return {
+            "link_type": "navigation",
+            "result_score": 5,
+            "follow_score": 1,
+            "reason": "not a finance destination",
+        }
+
+    def extract_contacts(self, text: str) -> list[dict[str, object]]:
+        return []
+
+    def confirm_document(self, text: str, url: str) -> None:
+        return None
+
+
+def test_model_can_drop_an_uncertain_link(db: Database):
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        html = SITE.get(path)
+        if html is None:
+            return httpx.Response(404, text="missing")
+        return httpx.Response(200, headers={"content-type": "text/html"}, text=html)
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.Client(transport=transport, follow_redirects=False)
+    fetcher = Fetcher(
+        client=client,
+        sleep_fn=lambda _: None,
+        resolve_check=lambda url: None,
+    )
+    model = _DropMiddleLinks()
+    runner = CrawlRunner(db, fetcher=fetcher, llm=model)  # type: ignore[arg-type]
+    site_id = runner.run(
+        "https://example.gov/",
+        CrawlConfig(max_pages=5, max_depth=2, max_documents=2),
+    )
+    runner.close()
+    site = db.get_site(site_id)
+    assert site is not None
+    assert model.calls >= 1
+    assert site["pages_fetched"] == 1
+    assert not any("budget.pdf" in link["url"] for link in site["links"])

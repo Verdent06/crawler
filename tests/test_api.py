@@ -13,6 +13,8 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("SCRAPER_DB_PATH", str(tmp_path / "api.db"))
     monkeypatch.setenv("SCRAPER_DATA_DIR", str(tmp_path))
     monkeypatch.delenv("OLLAMA_URL", raising=False)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     import importlib
     import app.main as main
 

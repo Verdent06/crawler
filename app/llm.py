@@ -1,4 +1,4 @@
-"""Optional Llama client via Ollama. Falls back silently when unavailable."""
+"""Optional model client. Uses an OpenAI-compatible chat API and falls back when unset."""
 
 from __future__ import annotations
 
@@ -9,53 +9,80 @@ from typing import Any
 
 import httpx
 
-DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
-DEFAULT_URL = os.environ.get("OLLAMA_URL", "").rstrip("/")
+DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
 
-class LlamaClient:
+class LlmClient:
     def __init__(
         self,
         base_url: str | None = None,
         model: str | None = None,
+        api_key: str | None = None,
         timeout: float = 20.0,
         client: httpx.Client | None = None,
     ) -> None:
-        self.base_url = (base_url if base_url is not None else DEFAULT_URL).rstrip("/")
-        self.model = model or DEFAULT_MODEL
+        if base_url is None:
+            self.base_url = os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+        else:
+            self.base_url = base_url.rstrip("/")
+        if api_key is None:
+            self.api_key = (
+                os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+            )
+        else:
+            self.api_key = api_key
+        self.model = model or os.environ.get("LLM_MODEL", DEFAULT_MODEL)
         self.timeout = timeout
         self._client = client
         self._available: bool | None = None
 
     @property
     def enabled(self) -> bool:
-        return bool(self.base_url)
+        return bool(self.base_url and self.api_key)
 
     def available(self) -> bool:
         if not self.enabled:
             return False
         if self._available is not None:
             return self._available
-        try:
-            client = self._client or httpx.Client(timeout=3.0)
-            owns = self._client is None
-            try:
-                resp = client.get(f"{self.base_url}/api/tags")
-                self._available = resp.status_code == 200
-            finally:
-                if owns:
-                    client.close()
-        except Exception:
-            self._available = False
+        resp = self._request("GET", "/models", timeout=3.0)
+        self._available = resp is not None and resp.status_code == 200
         return self._available
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        timeout: float | None = None,
+        json_body: dict[str, Any] | None = None,
+    ) -> httpx.Response | None:
+        if not self.enabled:
+            return None
+        client = self._client or httpx.Client()
+        owns = self._client is None
+        try:
+            return client.request(
+                method,
+                f"{self.base_url}{path}",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                timeout=self.timeout if timeout is None else timeout,
+                json=json_body,
+            )
+        except Exception:
+            return None
+        finally:
+            if owns:
+                client.close()
 
     def _chat_json(self, prompt: str) -> dict[str, Any] | None:
         if not self.available():
             return None
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.model,
-            "stream": False,
-            "format": "json",
+            "temperature": 0,
+            "response_format": {"type": "json_object"},
             "messages": [
                 {
                     "role": "system",
@@ -67,20 +94,21 @@ class LlamaClient:
                 {"role": "user", "content": prompt},
             ],
         }
-        try:
-            client = self._client or httpx.Client(timeout=self.timeout)
-            owns = self._client is None
-            try:
-                resp = client.post(f"{self.base_url}/api/chat", json=payload)
-                if resp.status_code != 200:
-                    return None
-                content = resp.json().get("message", {}).get("content", "")
-                return json.loads(content)
-            finally:
-                if owns:
-                    client.close()
-        except Exception:
+        resp = self._request("POST", "/chat/completions", json_body=payload)
+        if resp is not None and resp.status_code == 400:
+            payload.pop("response_format", None)
+            resp = self._request("POST", "/chat/completions", json_body=payload)
+        if resp is None or resp.status_code != 200:
             return None
+        try:
+            content = resp.json()["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError, ValueError):
+            return None
+        if isinstance(content, dict):
+            return content
+        if not isinstance(content, str):
+            return None
+        return parse_json_loose(content)
 
     def rerank_link(
         self, *, url: str, anchor_text: str, context: str
@@ -91,7 +119,10 @@ class LlamaClient:
             f"Anchor: {anchor_text}\n"
             f"Context: {context[:500]}\n"
             'Return JSON: {"link_type":"document|contact|navigation",'
-            '"result_score":0-100,"reason":"short"}'
+            '"result_score":0-100,"follow_score":0-100,"reason":"short"}\n'
+            "follow_score is how soon the crawler should open this page. "
+            "Use a high follow_score for finance departments, budgets, ACFRs, "
+            "and staff who handle them. Use a low follow_score for everything else."
         )
         return self._chat_json(prompt)
 

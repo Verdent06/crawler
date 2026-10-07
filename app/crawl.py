@@ -16,7 +16,7 @@ from app.extract import (
     page_looks_like_staff,
 )
 from app.fetch import Fetcher, UnsafeURLError, registrable_domain, same_site
-from app.llm import LlamaClient
+from app.llm import LlmClient
 from app.pdf_check import check_document, extract_pdf_text
 from app.score import KeywordScorer
 
@@ -47,12 +47,12 @@ class CrawlRunner:
         *,
         fetcher: Fetcher | None = None,
         scorer: KeywordScorer | None = None,
-        llm: LlamaClient | None = None,
+        llm: LlmClient | None = None,
     ) -> None:
         self.db = db
         self.fetcher = fetcher or Fetcher()
         self._owns_fetcher = fetcher is None
-        self.llm = llm or LlamaClient()
+        self.llm = llm or LlmClient()
         self.scorer = scorer
 
     def close(self) -> None:
@@ -296,6 +296,8 @@ class CrawlRunner:
             score.result_score = float(
                 llm_score.get("result_score", score.result_score)
             )
+            if llm_score.get("follow_score") is not None:
+                score.follow_score = float(llm_score["follow_score"])
             link_type = llm_score.get("link_type")
             if link_type in {"document", "contact", "navigation"}:
                 score.link_type = link_type

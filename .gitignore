@@ -24,3 +24,5 @@ htmlcov/
 .vscode/
 *.pdf
 !tests/fixtures/**/*.pdf
+frontend/node_modules/
+frontend/dist/
