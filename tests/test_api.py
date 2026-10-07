@@ -13,7 +13,6 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("SCRAPER_DB_PATH", str(tmp_path / "api.db"))
     monkeypatch.setenv("SCRAPER_DATA_DIR", str(tmp_path))
     monkeypatch.delenv("OLLAMA_URL", raising=False)
-    # Re-import app with new DB path
     import importlib
     import app.main as main
 
@@ -35,6 +34,36 @@ def test_scrape_rejects_localhost(client):
     c, _ = client
     resp = c.post("/scrape", json={"url": "http://127.0.0.1/"})
     assert resp.status_code == 400
+
+
+def test_duplicate_scrape_does_not_reset_running_job(client):
+    c, main = client
+    site_id = main.db.create_or_reset_site("https://example.gov/", "example.gov")
+    main.db.upsert_link(
+        site_id,
+        url="https://example.gov/budget.pdf",
+        source_page="https://example.gov/",
+        anchor_text="Budget",
+        link_type="document",
+        follow_score=10,
+        result_score=40,
+        matched_keywords=["budget"],
+        reason="keep-me",
+    )
+    with main._jobs_lock:
+        main._running_sites.add(site_id)
+
+    with patch("app.main.assert_public_url", lambda url: None):
+        with patch.object(main.CrawlRunner, "run") as run_mock:
+            resp = c.post("/scrape", json={"url": "https://example.gov/"})
+            run_mock.assert_not_called()
+
+    assert resp.status_code == 200
+    assert resp.json()["site_id"] == site_id
+    site = main.db.get_site(site_id)
+    assert site is not None
+    assert len(site["links"]) == 1
+    assert site["links"][0]["reason"] == "keep-me"
 
 
 def test_scrape_starts_background_job(client):

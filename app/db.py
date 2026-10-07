@@ -320,6 +320,13 @@ class Database:
             ).fetchall()
             return [dict(r) for r in rows]
 
+    def get_site_id_by_seed(self, seed_url: str) -> int | None:
+        with self.connection() as conn:
+            row = conn.execute(
+                "SELECT id FROM sites WHERE seed_url = ?", (seed_url,)
+            ).fetchone()
+            return int(row["id"]) if row else None
+
     def get_site(self, site_id: int) -> dict[str, Any] | None:
         with self.connection() as conn:
             row = conn.execute(

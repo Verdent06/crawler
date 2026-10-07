@@ -73,6 +73,27 @@ def test_fetch_caps_oversized_body():
     fetcher.close()
 
 
+def test_robots_redirect_to_localhost_is_ignored_safely():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(
+                302, headers={"Location": "http://127.0.0.1/robots.txt"}
+            )
+        return httpx.Response(200, text="ok")
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.Client(transport=transport, follow_redirects=False)
+    fetcher = Fetcher(
+        client=client,
+        sleep_fn=lambda _: None,
+        resolve_check=assert_public_url,
+    )
+    # robots load fails closed to empty allow-all; page fetch still SSRF-checks.
+    result = fetcher.fetch("https://example.com/page")
+    assert result.status_code == 200
+    fetcher.close()
+
+
 def test_http_error_status_sets_error():
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/robots.txt":

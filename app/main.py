@@ -65,10 +65,15 @@ def scrape(req: ScrapeRequest, background: BackgroundTasks) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     site_domain = registrable_domain(seed)
-    site_id = db.create_or_reset_site(seed, site_domain)
     with _jobs_lock:
-        if site_id in _running_sites:
-            return {"site_id": site_id, "status": "running", "domain": site_domain}
+        existing_id = db.get_site_id_by_seed(seed)
+        if existing_id is not None and existing_id in _running_sites:
+            return {
+                "site_id": existing_id,
+                "status": "running",
+                "domain": site_domain,
+            }
+        site_id = db.create_or_reset_site(seed, site_domain)
         _running_sites.add(site_id)
 
     config = CrawlConfig(

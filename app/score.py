@@ -92,9 +92,8 @@ class KeywordScorer:
         mailto = url.lower().startswith("mailto:")
 
         follow_score = total
-        # Navigation-friendly terms still matter for the frontier.
-        if "government" in blob or "department" in blob or "finance" in blob:
-            follow_score = max(follow_score, total)
+        if "government" in blob or "departments" in blob or "department" in blob:
+            follow_score += 5
 
         if is_document and total >= self.result_threshold * 0.5:
             link_type = "document"
@@ -103,7 +102,6 @@ class KeywordScorer:
             link_type = "contact"
             result_score = total + (10 if mailto else 0)
         elif total >= self.result_threshold:
-            # Likely a finance page that may yield documents/contacts.
             link_type = "navigation"
             result_score = total * 0.6
         else:

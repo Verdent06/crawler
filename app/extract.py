@@ -140,7 +140,6 @@ def extract_contacts(html: str) -> list[ExtractedContact]:
                 ExtractedContact(name=name, title=title, email=email, phone=phone)
             )
 
-    # Title-only rows near phones when no email is present.
     for line in text.splitlines():
         title = _find_title(line)
         if not title:
@@ -165,7 +164,6 @@ def _find_title(text: str) -> str | None:
     for hint in TITLE_HINTS:
         idx = lower.find(hint)
         if idx >= 0:
-            # Return a short slice around the matched title phrase.
             snippet = text[idx : idx + len(hint) + 40]
             snippet = re.split(r"[|\n•]", snippet)[0].strip(" ,;-")
             return snippet[:80]
@@ -186,7 +184,6 @@ def _find_phone(text: str) -> str | None:
 
 
 def _guess_name(text: str, email: str | None) -> str | None:
-    # Prefer "Name, Title" or "Name - Title" patterns.
     for pattern in (
         r"([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)\s*[,–-]\s*(?:Finance|Budget|Chief|Controller|Treasurer)",
         r"([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)\s+(?:Finance Director|CFO|Controller|Treasurer)",
@@ -199,7 +196,6 @@ def _guess_name(text: str, email: str | None) -> str | None:
         parts = re.split(r"[._\-]+", local)
         if 1 < len(parts) <= 3 and all(p.isalpha() for p in parts):
             return " ".join(p.capitalize() for p in parts)
-    # Fallback: first Proper Name in the window.
     m = re.search(r"\b([A-Z][a-z]+\s[A-Z][a-z]+)\b", text)
     if m:
         return m.group(1)

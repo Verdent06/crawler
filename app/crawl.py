@@ -91,6 +91,13 @@ class CrawlRunner:
                     continue
                 if not same_site(seed_url, url):
                     continue
+                path_lower = urlparse(url).path.lower()
+                looks_like_document = any(
+                    path_lower.endswith(ext) for ext in scorer.document_extensions
+                )
+                if looks_like_document and docs_checked >= config.max_documents:
+                    seen.add(url)
+                    continue
                 seen.add(url)
 
                 try:

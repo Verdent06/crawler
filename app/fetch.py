@@ -10,6 +10,8 @@ from typing import Callable
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
+from pathlib import Path
+
 import httpx
 import tldextract
 
@@ -18,6 +20,10 @@ MAX_BODY_BYTES = 50 * 1024 * 1024
 DEFAULT_TIMEOUT = 30.0
 MAX_DELAY_SECONDS = 10.0
 MIN_DELAY_SECONDS = 1.0
+
+_TLD_CACHE = Path(__file__).resolve().parent.parent / "data" / "tld_cache"
+_TLD_CACHE.mkdir(parents=True, exist_ok=True)
+_EXTRACTOR = tldextract.TLDExtract(cache_dir=str(_TLD_CACHE))
 
 
 class UnsafeURLError(ValueError):
@@ -35,7 +41,7 @@ class FetchResult:
 
 
 def registrable_domain(url: str) -> str:
-    extracted = tldextract.extract(url)
+    extracted = _EXTRACTOR(url)
     if not extracted.domain or not extracted.suffix:
         host = urlparse(url).hostname or ""
         return host.lower()
@@ -110,9 +116,19 @@ class RobotsCache:
         rp = RobotFileParser()
         delay = MIN_DELAY_SECONDS
         try:
-            self.resolve_check(robots_url)
-            resp = self.client.get(robots_url, follow_redirects=True, timeout=15.0)
-            if resp.status_code >= 400:
+            current = robots_url
+            resp = None
+            for _ in range(5):
+                self.resolve_check(current)
+                resp = self.client.get(current, follow_redirects=False, timeout=15.0)
+                if resp.status_code in {301, 302, 303, 307, 308}:
+                    location = resp.headers.get("location")
+                    if not location:
+                        break
+                    current = urljoin(current, location)
+                    continue
+                break
+            if resp is None or resp.status_code >= 400:
                 rp.parse([])
             else:
                 text = resp.text
