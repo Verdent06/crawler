@@ -9,8 +9,20 @@ from typing import Any
 
 import httpx
 
-DEFAULT_MODEL = "gpt-4o-mini"
-DEFAULT_BASE_URL = "https://api.openai.com/v1"
+DEFAULT_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+
+def _load_dotenv() -> None:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    load_dotenv(os.path.join(root, ".env"), override=False)
+
+
+_load_dotenv()
 
 
 class LlmClient:
@@ -28,7 +40,10 @@ class LlmClient:
             self.base_url = base_url.rstrip("/")
         if api_key is None:
             self.api_key = (
-                os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+                os.environ.get("LLM_API_KEY")
+                or os.environ.get("GEMINI_API_KEY")
+                or os.environ.get("OPENAI_API_KEY")
+                or ""
             )
         else:
             self.api_key = api_key

@@ -45,15 +45,22 @@ npm run dev
 
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api/*` to the FastAPI server. CORS is also enabled for the Vite origin as a backup.
 
-Optional model (any OpenAI-compatible chat API):
+Optional model (Gemini by default, any OpenAI-compatible chat API):
 
 ```bash
-export LLM_API_KEY=sk-...
-export LLM_BASE_URL=https://api.openai.com/v1   # optional; this is the default
-export LLM_MODEL=gpt-4o-mini                    # optional
+cp .env.example .env
+# put your Gemini API key in .env as LLM_API_KEY=...
 ```
 
-`OPENAI_API_KEY` is accepted if `LLM_API_KEY` is unset. Point `LLM_BASE_URL` at another host (Groq, OpenRouter, Together, and similar) when that host speaks the same chat-completions API. If neither key is set, the scraper uses keyword rules only. A model score on an uncertain link can raise or lower that link in the crawl.
+Or export in the shell that runs uvicorn:
+
+```bash
+export LLM_API_KEY=your-gemini-key
+export LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+export LLM_MODEL=gemini-3.5-flash-lite
+```
+
+`GEMINI_API_KEY` / `OPENAI_API_KEY` are accepted if `LLM_API_KEY` is unset. Point `LLM_BASE_URL` at another host (OpenAI, Groq, OpenRouter, Together) when that host speaks the same chat-completions API. If no key is set, the scraper uses keyword rules only. A model score on an uncertain link can raise or lower that link in the crawl.
 
 ## How ranking works
 

@@ -11,6 +11,7 @@ from app.llm import LlmClient
 
 def test_disabled_without_api_key(monkeypatch):
     monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     client = LlmClient()
     assert client.enabled is False
