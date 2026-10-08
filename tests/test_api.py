@@ -33,6 +33,19 @@ def test_health(client):
     assert body["llm_enabled"] is False
 
 
+def test_health_and_sites_also_live_under_api_prefix(client):
+    c, main = client
+    health = c.get("/api/health")
+    assert health.status_code == 200
+    assert health.json()["status"] == "ok"
+    assert c.get("/api/sites").status_code == 200
+    with patch("app.main.assert_public_url", lambda url: None):
+        with patch.object(main.CrawlRunner, "run", lambda self, *a, **k: None):
+            resp = c.post("/api/scrape", json={"url": "https://example.gov/"})
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "running"
+
+
 def test_scrape_rejects_localhost(client):
     c, _ = client
     resp = c.post("/scrape", json={"url": "http://127.0.0.1/"})

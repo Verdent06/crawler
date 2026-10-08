@@ -8,11 +8,17 @@ import os
 import threading
 import time
 from collections import defaultdict, deque
+from collections.abc import Mapping
 from typing import Callable
 
 DEFAULT_RATE_LIMIT_PER_MINUTE = 10
 DEFAULT_MAX_CONCURRENT_SCRAPES = 3
 _SWEEP_THRESHOLD = 1024
+_TRUE_VALUES = {"1", "true", "yes", "on"}
+# Cloudflare (Render's edge) overwrites these; a browser cannot spoof them through CF.
+# X-Forwarded-For is a last resort: Render appends rather than replacing, so the
+# leftmost entry can be client-supplied.
+_FORWARDED_CLIENT_HEADERS = ("cf-connecting-ip", "true-client-ip", "x-forwarded-for")
 
 
 def env_int(name: str, default: int) -> int:
@@ -21,6 +27,51 @@ def env_int(name: str, default: int) -> int:
         return max(0, int(raw)) if raw else default
     except ValueError:
         return default
+
+
+def env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in _TRUE_VALUES
+
+
+def _header(headers: Mapping[str, str], name: str) -> str | None:
+    target = name.lower()
+    getter = getattr(headers, "get", None)
+    if callable(getter):
+        value = getter(name)
+        if value:
+            return value
+        value = getter(target)
+        if value:
+            return value
+    for key, value in headers.items():
+        if str(key).lower() == target and value:
+            return value
+    return None
+
+
+def client_ip(
+    headers: Mapping[str, str],
+    peer: str | None,
+    *,
+    trust_forwarded: bool | None = None,
+) -> str:
+    """Return the rate-limit key for this request.
+
+    Direct connections (the default) use the TCP peer so clients cannot spoof
+    X-Forwarded-For. Set TRUST_FORWARDED_FOR when the process is behind a
+    platform proxy that overwrites Cloudflare's client-IP headers (Render).
+    """
+    if trust_forwarded is None:
+        trust_forwarded = env_flag("TRUST_FORWARDED_FOR")
+    if trust_forwarded:
+        for name in _FORWARDED_CLIENT_HEADERS:
+            raw = _header(headers, name)
+            if not raw:
+                continue
+            first = raw.split(",")[0].strip()
+            if first:
+                return first
+    return peer or "unknown"
 
 
 def api_key_matches(expected: str, provided: str | None) -> bool:
