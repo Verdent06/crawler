@@ -57,3 +57,33 @@ def test_rerank_link_reads_chat_completion():
     assert result is not None
     assert result["follow_score"] == 64
     assert result["link_type"] == "navigation"
+
+
+def test_extract_contacts_accepts_a_bare_list():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": []})
+        payload = [
+            {
+                "name": "Marti Praschan",
+                "title": "Chief Financial Officer",
+                "email": "mpraschan@a2gov.org",
+                "phone": "734.794.6500",
+            }
+        ]
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps(payload)}}]},
+        )
+
+    http = httpx.Client(transport=httpx.MockTransport(handler))
+    client = LlmClient(
+        base_url="https://api.example/v1",
+        api_key="test-key",
+        model="gemini-3.5-flash-lite",
+        client=http,
+    )
+    contacts = client.extract_contacts("Chief Financial Officer Marti Praschan")
+    http.close()
+    assert contacts[0]["name"] == "Marti Praschan"
+    assert contacts[0]["email"] == "mpraschan@a2gov.org"

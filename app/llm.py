@@ -91,7 +91,7 @@ class LlmClient:
             if owns:
                 client.close()
 
-    def _chat_json(self, prompt: str) -> dict[str, Any] | None:
+    def _chat_json(self, prompt: str) -> Any | None:
         if not self.available():
             return None
         payload: dict[str, Any] = {
@@ -119,7 +119,7 @@ class LlmClient:
             content = resp.json()["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError, ValueError):
             return None
-        if isinstance(content, dict):
+        if isinstance(content, (dict, list)):
             return content
         if not isinstance(content, str):
             return None
@@ -139,19 +139,25 @@ class LlmClient:
             "Use a high follow_score for finance departments, budgets, ACFRs, "
             "and staff who handle them. Use a low follow_score for everything else."
         )
-        return self._chat_json(prompt)
+        data = self._chat_json(prompt)
+        return data if isinstance(data, dict) else None
 
     def extract_contacts(self, page_text: str) -> list[dict[str, Any]]:
         prompt = (
             "Extract finance-related contacts from this page text. "
-            "Only include people tied to finance, budget, treasurer, controller, or CFO.\n"
+            "Only include people tied to finance, budget, treasurer, controller, or CFO. "
+            "Copy email and phone only when they appear in the text. "
+            "Skip anyone who has neither.\n"
             f"Text:\n{page_text[:3500]}\n"
             'Return JSON: {"contacts":[{"name":"","title":"","email":"","phone":""}]}'
         )
         data = self._chat_json(prompt)
-        if not data:
+        if isinstance(data, list):
+            contacts = data
+        elif isinstance(data, dict):
+            contacts = data.get("contacts") or []
+        else:
             return []
-        contacts = data.get("contacts") or []
         if not isinstance(contacts, list):
             return []
         return [c for c in contacts if isinstance(c, dict)]
@@ -165,10 +171,11 @@ class LlmClient:
             '"fiscal_year":"YYYY|null","verdict":"confirmed|mismatch|unreadable",'
             '"title":"short","evidence":"short"}'
         )
-        return self._chat_json(prompt)
+        data = self._chat_json(prompt)
+        return data if isinstance(data, dict) else None
 
 
-def parse_json_loose(text: str) -> dict[str, Any] | None:
+def parse_json_loose(text: str) -> Any | None:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
