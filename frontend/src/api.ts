@@ -63,7 +63,7 @@ export type ScrapeRequest = {
 }
 
 const STATUS_MESSAGES: Record<number, string> = {
-  401: 'The API rejected the request: missing or invalid API key. Start the dev server with SCRAPER_API_KEY set.',
+  401: 'The API rejected the request: missing or invalid API key. For local dev, start the Vite proxy with SCRAPER_API_KEY set. The browser never sends the key, so leave SCRAPER_API_KEY unset on the public demo.',
   429: 'Too many scrape requests. Wait a moment and try again.',
   503: 'The server is busy with other crawls. Try again shortly.',
 }

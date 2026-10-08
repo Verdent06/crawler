@@ -63,14 +63,16 @@ Copy [`.env.example`](.env.example) to `.env` (gitignored) for local use. It lis
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `SCRAPER_API_KEY` | unset | When set, `POST /scrape` requires a matching `X-API-Key` header (constant-time compare, `401` otherwise). Unset means no auth, for local dev. Set it on any shared or public deployment. |
+| `SCRAPER_API_KEY` | unset | When set, `POST /scrape` (and `/api/scrape`) requires a matching `X-API-Key` header (constant-time compare, `401` otherwise). Unset means no auth. Leave unset on the public demo: the browser never sends this header. |
 | `SCRAPE_RATE_LIMIT_PER_MINUTE` | `10` | Max `POST /scrape` requests per client IP per rolling minute. `429` with `Retry-After` when exceeded. `0` disables. |
 | `MAX_CONCURRENT_SCRAPES` | `3` | Crawls allowed to run at once. A new crawl past the cap gets `503` with `Retry-After`. `0` disables. |
+| `TRUST_FORWARDED_FOR` | off | `1`/`true` keys the rate limiter on Cloudflare's `CF-Connecting-IP` (then `True-Client-IP`, then `X-Forwarded-For`). Off uses the TCP peer so clients cannot spoof those headers. `render.yaml` turns this on for Render. |
 | `DNS_FALLBACK` | off | `1`/`true` resolves hostnames through the nameservers in `/etc/resolv.conf` when the OS resolver fails (a macOS stub-resolver workaround). Installed at app startup, process-wide. Leave off in production. SSRF checks are the same either way: every resolved address must be globally routable. |
 | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | unset / Gemini / `gemini-3.5-flash-lite` | Optional model, described below. |
-| `SCRAPER_DB_PATH`, `SCRAPER_DATA_DIR` | `data/scraper.db`, `data/` | Where SQLite and the TLD cache live. |
+| `SCRAPER_DB_PATH`, `SCRAPER_DATA_DIR` | `data/scraper.db`, `data/` | Where SQLite and the TLD cache live. Created at startup if missing. |
+| `PORT` | `8000` | Listen port. Render and Railway set this. |
 
-The rate limit keys on the TCP peer address. Behind a reverse proxy every request looks like the proxy's address, so enforce limits at the proxy or the gateway there; the in-process limiter does not trust `X-Forwarded-For`, which clients can spoof.
+The rate limiter uses the TCP peer unless `TRUST_FORWARDED_FOR` is on. Render sits behind Cloudflare and a load balancer, so every request would otherwise share one IP; the Blueprint sets the flag. Do not enable it on a process that is reachable without that proxy.
 
 Optional model (Gemini by default, any OpenAI-compatible chat API):
 
@@ -213,16 +215,63 @@ Recorded with `scripts/run_live_samples.py` (`max_pages=8`, `max_depth=2`, keywo
 | `https://asu.edu/` | Completed. Frontier preferred `cfo.asu.edu` budget/finance/contact URLs despite a noisy university homepage. |
 | `https://boerneisd.net/` | Completed. Honored `Crawl-delay: 5` and stayed off disallowed paths. Found staff/contact signals; finance PDFs need a deeper or keyword-tuned run. |
 
-## Deploying and scaling
+## Deploy
+
+One web process serves the built React UI at `/` and the API at `/api/*` (the same paths the Vite proxy uses in dev). Unprefixed API routes (`/health`, `/scrape`, …) stay available for the health check and curl. No separate frontend host, no browser CORS or API-key setup.
+
+### Render Blueprint (Free web service)
+
+1. Push this repo to GitHub; deploy from `main`.
+2. In the [Render Dashboard](https://dashboard.render.com): **New → Blueprint**.
+3. Connect the repo. Render reads [`render.yaml`](render.yaml) (Python runtime, Free plan, health check on `/health`).
+4. Leave `LLM_API_KEY` and `SCRAPER_API_KEY` empty in the prompt (keyword-only mode; the UI cannot send `X-API-Key`). Set them later in the service's Environment page if you want the model or curl-only scrape auth.
+5. Apply. Render runs the build and start commands below.
+
+Build command:
+
+```bash
+./scripts/build.sh
+```
+
+(`python -m pip install -r requirements.txt`, then `npm ci` and `npm run build` in `frontend/`)
+
+Start command:
+
+```bash
+./scripts/start.sh
+```
+
+(`uvicorn app.main:app --host 0.0.0.0 --port $PORT`)
+
+Pinned versions in the Blueprint: `PYTHON_VERSION=3.12.10`, `NODE_VERSION=22.14.0`. `TRUST_FORWARDED_FOR=1` is set for you.
+
+Same build/start and `$PORT` work on Railway or via the optional [`Dockerfile`](Dockerfile).
+
+### Env vars on Render
+
+| Variable | What to do |
+| --- | --- |
+| `LLM_API_KEY` | Leave empty for keyword-only. Optional; never commit a real value. |
+| `SCRAPER_API_KEY` | Leave empty so the public UI can `POST /api/scrape`. Optional for curl-only lock-down. |
+| `TRUST_FORWARDED_FOR` | Set to `1` by `render.yaml`. |
+| `PYTHON_VERSION` / `NODE_VERSION` | Set by `render.yaml`. |
+| `PORT` | Set by Render. Do not override. |
+| `DNS_FALLBACK` | Leave unset. |
+
+### Free-tier caveats
+
+- After **15 minutes idle**, Render spins the service down. The next request takes **about a minute** (Render shows a loading page).
+- The filesystem is ephemeral: SQLite under `data/` is **wiped on spin-down, restart, or redeploy**. That is expected for this demo.
+- 750 Free instance hours per month; outbound bandwidth and build pipeline minutes count against the workspace included usage. Free services cannot attach a disk.
 
 ### Public deployment notes
 
 One uvicorn process with SQLite and in-process background tasks is a demo topology. Before exposing it:
 
-- Set `SCRAPER_API_KEY`, terminate TLS in front of the API, and keep `DNS_FALLBACK` off.
+- Leave `SCRAPER_API_KEY` unset if the React UI should be able to start scrapes. TLS is terminated by Render. Keep `DNS_FALLBACK` off.
 - The key, rate limit, and concurrency cap are per process and held in memory. They reset on restart and are not shared across workers, so run a single worker or move them out (below). Running crawls live inside the process and do not survive a restart.
-- Reads (`/sites`, `/links`) are unauthenticated. Put them behind the same gateway if results are not public.
-- Raw secrets belong in the platform's secret store, not in the image or repo. `.env` is for local use only.
+- Reads (`/sites`, `/links`, and `/api/sites`, `/api/links`) are unauthenticated.
+- Raw secrets belong in the platform's secret store, not in the image or repo. `.env` is for local use only. `render.yaml` marks `LLM_API_KEY` and `SCRAPER_API_KEY` as `sync: false` so Blueprint apply prompts instead of writing values into git.
 
 What changes at scale: a gateway or API-key service replaces the shared secret (per-tenant keys, quotas, audit); rate limits and the crawl cap move to Redis or the job queue; crawls run in separate worker processes pulling from a queue instead of FastAPI background tasks; SQLite gives way to Postgres.
 
@@ -267,11 +316,13 @@ flowchart LR
   api --> db[SQLite]
 ```
 
+Production uses those `/api/*` paths on the same origin (no Vite proxy). `GET /` is the built UI.
+
 ## Project layout
 
 ```
 app/
-  main.py          FastAPI routes + CORS
+  main.py          FastAPI routes, /api prefix, production UI serving
   security.py      API key check, per-client rate limiter
   resolve.py       Opt-in DNS fallback (DNS_FALLBACK=1)
   crawl.py         Frontier crawl loop
@@ -283,6 +334,8 @@ app/
   llm.py           Optional OpenAI-compatible model client
   db.py            SQLite schema and queries
 frontend/          React UI (Vite + TypeScript)
-scripts/           live samples, live ground-truth diff, crawl dump, fixture recorder
+scripts/           build.sh / start.sh, live samples, fixture recorder
+render.yaml        Render Blueprint (Free web service)
+Dockerfile         Optional container with the same build/start
 tests/             unit tests + offline ground-truth replay (tests/fixtures)
 ```

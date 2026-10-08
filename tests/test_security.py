@@ -6,7 +6,7 @@ import importlib
 import pytest
 from fastapi.testclient import TestClient
 
-from app.security import SlidingWindowLimiter, api_key_matches, env_int
+from app.security import SlidingWindowLimiter, api_key_matches, client_ip, env_flag, env_int
 
 BODY = {"url": "https://example.gov/"}
 
@@ -22,7 +22,12 @@ class FakeClock:
 def _load(tmp_path, monkeypatch, **env):
     monkeypatch.setenv("SCRAPER_DB_PATH", str(tmp_path / "sec.db"))
     monkeypatch.setenv("SCRAPER_DATA_DIR", str(tmp_path))
-    for name in ("SCRAPER_API_KEY", "SCRAPE_RATE_LIMIT_PER_MINUTE", "MAX_CONCURRENT_SCRAPES"):
+    for name in (
+        "SCRAPER_API_KEY",
+        "SCRAPE_RATE_LIMIT_PER_MINUTE",
+        "MAX_CONCURRENT_SCRAPES",
+        "TRUST_FORWARDED_FOR",
+    ):
         monkeypatch.delenv(name, raising=False)
     for name, value in env.items():
         monkeypatch.setenv(name, value)
@@ -164,3 +169,61 @@ def test_env_int(monkeypatch, raw, expected):
     if raw is not None:
         monkeypatch.setenv("SOME_LIMIT", raw)
     assert env_int("SOME_LIMIT", 7) == expected
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [(None, False), ("", False), ("0", False), ("no", False), ("1", True), ("true", True), ("YES", True), ("on", True)],
+)
+def test_env_flag(monkeypatch, raw, expected):
+    monkeypatch.delenv("SOME_FLAG", raising=False)
+    if raw is not None:
+        monkeypatch.setenv("SOME_FLAG", raw)
+    assert env_flag("SOME_FLAG") is expected
+
+
+def test_client_ip_ignores_forwarded_headers_by_default():
+    headers = {
+        "cf-connecting-ip": "203.0.113.9",
+        "x-forwarded-for": "198.51.100.1",
+    }
+    assert client_ip(headers, "10.0.0.8", trust_forwarded=False) == "10.0.0.8"
+
+
+def test_client_ip_prefers_cloudflare_over_xff_when_trusted():
+    headers = {
+        "cf-connecting-ip": "203.0.113.9",
+        "x-forwarded-for": "198.51.100.1, 203.0.113.9",
+    }
+    assert client_ip(headers, "10.0.0.8", trust_forwarded=True) == "203.0.113.9"
+
+
+def test_client_ip_falls_back_to_xff_then_peer():
+    assert (
+        client_ip({"x-forwarded-for": "198.51.100.7, 10.1.1.1"}, "10.0.0.8", trust_forwarded=True)
+        == "198.51.100.7"
+    )
+    assert client_ip({}, "10.0.0.8", trust_forwarded=True) == "10.0.0.8"
+    assert client_ip({}, None, trust_forwarded=False) == "unknown"
+
+
+def test_spoofed_xff_ignored_when_flag_off(make_client):
+    client, main = make_client(SCRAPE_RATE_LIMIT_PER_MINUTE="1")
+    clock = FakeClock()
+    main.rate_limiter = SlidingWindowLimiter(1, clock=clock)
+
+    assert client.post("/scrape", json=BODY, headers={"X-Forwarded-For": "203.0.113.10"}).status_code == 200
+    blocked = client.post("/scrape", json=BODY, headers={"X-Forwarded-For": "203.0.113.11"})
+    assert blocked.status_code == 429
+
+
+def test_forwarded_client_ip_used_when_flag_on(make_client):
+    client, main = make_client(TRUST_FORWARDED_FOR="1", SCRAPE_RATE_LIMIT_PER_MINUTE="1")
+    clock = FakeClock()
+    main.rate_limiter = SlidingWindowLimiter(1, clock=clock)
+
+    first = {"CF-Connecting-IP": "203.0.113.10"}
+    second = {"CF-Connecting-IP": "203.0.113.11"}
+    assert client.post("/scrape", json=BODY, headers=first).status_code == 200
+    assert client.post("/scrape", json=BODY, headers=first).status_code == 429
+    assert client.post("/scrape", json=BODY, headers=second).status_code == 200

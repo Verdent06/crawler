@@ -1,0 +1,21 @@
+# One Free web service: built React UI at / and the API under /api/* (and at the
+# unprefixed routes the health check and curl examples use).
+services:
+  - type: web
+    name: pursuit-link-scraper
+    runtime: python
+    plan: free
+    buildCommand: ./scripts/build.sh
+    startCommand: ./scripts/start.sh
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      - key: NODE_VERSION
+        value: "22.14.0"
+      - key: TRUST_FORWARDED_FOR
+        value: "1"
+      - key: LLM_API_KEY
+        sync: false
+      - key: SCRAPER_API_KEY
+        sync: false

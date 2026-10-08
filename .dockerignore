@@ -1,0 +1,13 @@
+.git
+.venv
+venv
+frontend/node_modules
+frontend/dist
+data
+**/__pycache__
+.pytest_cache
+.env
+.env.*
+!.env.example
+tests
+scripts/record_fixture.py

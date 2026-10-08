@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+import os
 import socket
 import time
 from dataclasses import dataclass
@@ -21,7 +22,12 @@ DEFAULT_TIMEOUT = 30.0
 MAX_DELAY_SECONDS = 10.0
 MIN_DELAY_SECONDS = 1.0
 
-_TLD_CACHE = Path(__file__).resolve().parent.parent / "data" / "tld_cache"
+_DATA_ROOT = Path(
+    os.environ.get(
+        "SCRAPER_DATA_DIR", Path(__file__).resolve().parent.parent / "data"
+    )
+)
+_TLD_CACHE = _DATA_ROOT / "tld_cache"
 _TLD_CACHE.mkdir(parents=True, exist_ok=True)
 _EXTRACTOR = tldextract.TLDExtract(cache_dir=str(_TLD_CACHE))
 
