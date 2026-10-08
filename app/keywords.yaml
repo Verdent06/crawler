@@ -18,6 +18,7 @@ positive:
   cfo: 30
   controller: 25
   "staff directory": 20
+  leadership: 28
   directory: 10
   contact: 12
   "contact us": 15
@@ -54,6 +55,8 @@ negative:
   election: -10
   police: -10
   ticket: -20
+  "public records": -40
+  "records request": -35
 
 document_extensions:
   - .pdf
@@ -72,6 +75,21 @@ contact_signals:
   - "tel:"
   - "staff directory"
   - directory
+
+contact_page_terms:
+  - leadership
+  - "staff directory"
+  - directory
+  - "contact us"
+  - "our team"
+  - "meet the team"
+
+contact_page_exclusions:
+  - program
+  - development
+  - award
+  - scholarship
+  - admission
 
 follow_threshold: 8
 result_threshold: 20

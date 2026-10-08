@@ -72,10 +72,30 @@ def _nearby_context(tag: Tag) -> str:
                 parts.append(heading.get_text(" ", strip=True))
             if parent.name in {"li", "td", "tr", "article", "section"}:
                 parts.append(parent.get_text(" ", strip=True)[:240])
+                label = _preceding_label(parent)
+                if label:
+                    parts.append(label)
                 break
         parent = parent.parent
         depth += 1
     return " ".join(p for p in parts if p)[:400]
+
+
+def _preceding_label(node: Tag) -> str:
+    current: Tag | None = node.parent if node.name == "li" else node
+    for _ in range(3):
+        if not isinstance(current, Tag):
+            return ""
+        sibling = current.find_previous_sibling()
+        hops = 0
+        while isinstance(sibling, Tag) and hops < 3:
+            text = sibling.get_text(" ", strip=True)
+            if 0 < len(text) <= 80:
+                return text
+            sibling = sibling.find_previous_sibling()
+            hops += 1
+        current = current.parent
+    return ""
 
 
 _CF_HREF = re.compile(r"/cdn-cgi/l/email-protection#([0-9a-fA-F]{6,})")

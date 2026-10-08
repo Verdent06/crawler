@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 from contextlib import asynccontextmanager
@@ -11,6 +12,13 @@ from typing import Any, AsyncIterator
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:%(name)s:%(message)s",
+)
+logging.getLogger("app.crawl").setLevel(logging.INFO)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 from app import __version__
 from app.crawl import CrawlConfig, CrawlRunner

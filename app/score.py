@@ -10,6 +10,16 @@ from urllib.parse import urlparse
 import yaml
 
 DEFAULT_KEYWORDS_PATH = Path(__file__).with_name("keywords.yaml")
+_SHAREPOINT_FILES = ("/:b:/", "/:x:/", "/:w:/", "/:p:/")
+_FINANCE_FILE_TERMS = ("budget", "acfr", "cafr", "financial", "finance", "audit")
+
+
+def is_file_url(url: str, extensions: list[str]) -> bool:
+    path = urlparse(url).path.lower()
+    if any(path.endswith(ext) for ext in extensions):
+        return True
+    lowered = url.lower()
+    return any(token in lowered for token in _SHAREPOINT_FILES)
 
 
 @dataclass
@@ -54,6 +64,12 @@ class KeywordScorer:
         self.contact_signals = [
             str(s).lower() for s in signals if not isinstance(s, dict)
         ]
+        self.contact_page_terms = [
+            str(t).lower() for t in config.get("contact_page_terms") or []
+        ]
+        self.contact_page_exclusions = [
+            str(t).lower() for t in config.get("contact_page_exclusions") or []
+        ]
         self.follow_threshold = float(config.get("follow_threshold", 8))
         self.result_threshold = float(config.get("result_threshold", 20))
         self.uncertain_low = float(config.get("uncertain_low", 15))
@@ -80,11 +96,9 @@ class KeywordScorer:
                 matched.append(f"-{term}")
                 total += weight
 
-        path = urlparse(url).path.lower()
-        is_document = any(path.endswith(ext) for ext in self.document_extensions)
-        if is_document and any(
-            t in blob for t in ("budget", "acfr", "cafr", "financial", "finance", "audit")
-        ):
+        is_file = is_file_url(url, self.document_extensions)
+        finance_file = is_file and any(term in blob for term in _FINANCE_FILE_TERMS)
+        if finance_file:
             total += self.document_boost
             matched.append("document_ext")
 
@@ -95,9 +109,9 @@ class KeywordScorer:
         if "government" in blob or "departments" in blob or "department" in blob:
             follow_score += 5
 
-        if is_document and total >= self.result_threshold * 0.5:
+        if finance_file and total >= self.result_threshold * 0.5:
             link_type = "document"
-            result_score = total + (self.document_boost if "document_ext" not in matched else 0)
+            result_score = total
         elif mailto or (has_contact and total >= 10):
             link_type = "contact"
             result_score = total + (10 if mailto else 0)
@@ -112,7 +126,7 @@ class KeywordScorer:
         reason_parts = []
         if matched:
             reason_parts.append("matched: " + ", ".join(matched[:8]))
-        if is_document:
+        if finance_file:
             reason_parts.append("file extension looks like a document")
         if mailto:
             reason_parts.append("mailto link")
@@ -126,6 +140,12 @@ class KeywordScorer:
             reason=reason,
             uncertain=uncertain,
         )
+
+    def is_contact_page(self, url: str, anchor_text: str = "") -> bool:
+        blob = f"{urlparse(url).path.lower()} {anchor_text.lower()}"
+        if any(term in blob for term in self.contact_page_exclusions):
+            return False
+        return any(term in blob for term in self.contact_page_terms)
 
     def should_follow(self, score: ScoreResult, depth: int, max_depth: int) -> bool:
         if depth >= max_depth:

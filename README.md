@@ -79,6 +79,8 @@ Document links (`.pdf`, `.xlsx`, …) with finance keywords are checked: the fir
 
 Contacts are pulled from finance-relevant staff/contact pages (the page's URL path or `<title>` must score as finance). A contact is stored only when it has an email or phone, and a phone-only entry also needs a person's name. Obfuscated emails (`name [at] city.gov`, Cloudflare `email-protection` links) and contact cards embedded as escaped HTML inside page scripts are decoded. A name is only guessed from page text when it fits the email address, so nav labels and sentences are not stored as people.
 
+Links to leadership, staff-directory, and contact-us pages that already score as finance (follow score 50+) are crawled first and may sit one level deeper than other high-scoring finance pages, so they stay reachable under small UI limits. Links to `leadership-programs` and similar are excluded (`contact_page_terms` / `contact_page_exclusions` in `keywords.yaml`).
+
 ```mermaid
 flowchart LR
   api[FastAPI] --> runner[CrawlRunner]
