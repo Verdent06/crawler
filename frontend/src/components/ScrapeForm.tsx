@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { normalizeSeedUrl } from '../url'
 
 export type ScrapeFormValues = {
   url: string
@@ -13,14 +14,14 @@ type Props = {
 }
 
 export function ScrapeForm({ disabled, error, onSubmit }: Props) {
-  const [url, setUrl] = useState('https://www.a2gov.org/')
+  const [url, setUrl] = useState('asu.edu')
   const [maxPages, setMaxPages] = useState(12)
   const [maxDepth, setMaxDepth] = useState(2)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     onSubmit({
-      url: url.trim(),
+      url: normalizeSeedUrl(url),
       max_pages: maxPages,
       max_depth: maxDepth,
     })
@@ -35,9 +36,11 @@ export function ScrapeForm({ disabled, error, onSubmit }: Props) {
           <input
             id="seed-url"
             name="url"
-            type="url"
+            type="text"
+            inputMode="url"
+            autoComplete="url"
             required
-            placeholder="https://www.a2gov.org/"
+            placeholder="asu.edu or https://asu.edu"
             value={url}
             disabled={disabled}
             onChange={(e) => setUrl(e.target.value)}

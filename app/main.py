@@ -10,7 +10,7 @@ from typing import Any, AsyncIterator
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, field_validator
 
 from app import __version__
 from app.crawl import CrawlConfig, CrawlRunner
@@ -18,6 +18,7 @@ from app.db import Database
 from app.fetch import UnsafeURLError, assert_public_url, registrable_domain
 from app.llm import LlmClient
 from app.resolve import install_dns_fallback_from_env
+from app.urls import normalize_seed_url
 
 DATA_DIR = Path(
     os.environ.get(
@@ -61,11 +62,19 @@ _running_sites: set[int] = set()
 
 
 class ScrapeRequest(BaseModel):
-    url: HttpUrl
+    url: str
     keywords: list[str] | None = None
     max_pages: int = Field(default=25, ge=1, le=100)
     max_depth: int = Field(default=3, ge=0, le=6)
     max_documents: int = Field(default=8, ge=0, le=30)
+
+    @field_validator("url")
+    @classmethod
+    def _normalize_url(cls, value: str) -> str:
+        try:
+            return normalize_seed_url(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 @app.get("/health")
