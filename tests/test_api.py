@@ -101,7 +101,53 @@ def test_scrape_starts_background_job(client):
     # BackgroundTasks run eagerly in TestClient
     site = c.get(f"/sites/{site_id}").json()
     assert site["status"] == "completed"
-    assert len(site["links"]) == 1
+    assert site["links"] == []
 
     links = c.get("/links", params={"q": "budget"}).json()
     assert links["count"] >= 1
+
+
+def _link(main, site_id, url, link_type):
+    main.db.upsert_link(
+        site_id,
+        url=url,
+        source_page="https://example.gov/",
+        anchor_text=None,
+        link_type=link_type,
+        follow_score=10,
+        result_score=40,
+        matched_keywords=[],
+        reason="test",
+    )
+
+
+def test_site_links_exclude_files_and_documents_stay_listed(client):
+    c, main = client
+    site_id = main.db.create_or_reset_site("https://example.gov/", "example.gov")
+    _link(main, site_id, "https://example.gov/finance", "navigation")
+    _link(main, site_id, "https://example.gov/staff", "contact")
+    _link(main, site_id, "mailto:finance@example.gov", "contact")
+    _link(main, site_id, "https://example.gov/budget.pdf", "document")
+    _link(main, site_id, "https://example.gov/forms/pci.pdf", "navigation")
+    _link(main, site_id, "https://x.sharepoint.com/:b:/s/a/b", "document")
+    main.db.upsert_document(
+        site_id,
+        url="https://example.gov/budget.pdf",
+        claimed_type="budget",
+        fiscal_year="2026",
+        title="Budget",
+        verdict="confirmed",
+        evidence="ok",
+    )
+
+    site = c.get(f"/sites/{site_id}").json()
+
+    assert {row["url"] for row in site["links"]} == {
+        "https://example.gov/finance",
+        "https://example.gov/staff",
+        "mailto:finance@example.gov",
+    }
+    assert [d["url"] for d in site["documents"]] == ["https://example.gov/budget.pdf"]
+
+    stored = c.get("/links", params={"type": "document"}).json()
+    assert stored["count"] == 2

@@ -72,3 +72,39 @@ def test_contact_page_link_is_not_downgraded_by_a_later_navigation_row(db: Datab
     db.upsert_link(site_id, url=url, link_type="navigation", reason="matched: finance", **common)
     site = db.get_site(site_id)
     assert [link["link_type"] for link in site["links"]] == ["contact"]
+
+
+def test_record_unchecked_documents_fills_missing_rows_once(db: Database):
+    site_id = db.create_or_reset_site("https://example.gov/", "example.gov")
+    for url, kind in (
+        ("https://example.gov/a.pdf", "document"),
+        ("https://example.gov/b.pdf", "document"),
+        ("https://example.gov/finance", "navigation"),
+    ):
+        db.upsert_link(
+            site_id,
+            url=url,
+            source_page=None,
+            anchor_text="A",
+            link_type=kind,
+            follow_score=1,
+            result_score=30,
+            matched_keywords=[],
+            reason="r",
+        )
+    db.upsert_document(
+        site_id,
+        url="https://example.gov/a.pdf",
+        claimed_type="acfr",
+        fiscal_year="2024",
+        title="A",
+        verdict="confirmed",
+        evidence="ok",
+    )
+
+    assert db.record_unchecked_documents(site_id) == 1
+    assert db.record_unchecked_documents(site_id) == 0
+    docs = {d["url"]: d for d in db.get_site(site_id)["documents"]}
+    assert docs["https://example.gov/a.pdf"]["verdict"] == "confirmed"
+    assert docs["https://example.gov/b.pdf"]["verdict"] == "skipped"
+    assert len(docs) == 2

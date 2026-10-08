@@ -437,6 +437,7 @@ class CrawlRunner:
                 timing["pdf_s"],
                 total_s,
             )
+            self._backfill_documents(site_id)
             if pages_fetched == 0:
                 self.db.update_site(
                     site_id,
@@ -451,6 +452,7 @@ class CrawlRunner:
             return site_id
         except Exception as exc:
             logger.exception("crawl failed for %s", seed_url)
+            self._backfill_documents(site_id)
             self.db.update_site(
                 site_id,
                 status="failed",
@@ -458,6 +460,12 @@ class CrawlRunner:
                 pages_fetched=pages_fetched,
             )
             return site_id
+
+    def _backfill_documents(self, site_id: int) -> None:
+        try:
+            self.db.record_unchecked_documents(site_id)
+        except Exception:
+            logger.exception("document backfill failed for site %s", site_id)
 
     def _merge_llm_score(self, score: Any, llm_score: dict[str, Any]) -> Any:
         try:

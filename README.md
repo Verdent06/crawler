@@ -131,8 +131,8 @@ erDiagram
 | `GET` | `/health` | Process health and whether the model API answered |
 | `POST` | `/scrape` | Start a background crawl |
 | `GET` | `/sites` | List crawl jobs |
-| `GET` | `/sites/{id}` | Job detail with links, contacts, documents |
-| `GET` | `/links` | Query stored links (`domain`, `type`, `min_score`, `q`) |
+| `GET` | `/sites/{id}` | Job detail. `links` holds navigation and contact pages only; files (PDF, XLSX, SharePoint) are listed under `documents` |
+| `GET` | `/links` | Query every stored link row, including `type=document` (`domain`, `type`, `min_score`, `q`) |
 
 Example:
 
@@ -213,7 +213,7 @@ The UI is a Vite + React + TypeScript app:
 
 - Paste a seed URL, set max pages/depth, start a scrape
 - Polls `GET /sites/{id}` while the job is running
-- Tabs for ranked links (filterable), contacts, and document checks
+- Tabs for ranked page links (filterable, files excluded), contacts, and document checks (every document link ends up here, confirmed or skipped)
 - Distinct empty / crawling / failed / zero-result states
 - Health badge for API up and whether the model API is available
 

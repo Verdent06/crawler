@@ -12,6 +12,7 @@ from typing import Any, Iterator
 
 
 CONTACT_PAGE_REASON = "extracted finance contact from page"
+UNCHECKED_EVIDENCE = "document link found but not downloaded"
 
 
 def utc_now() -> str:
@@ -317,6 +318,28 @@ class Database:
                     now,
                 ),
             )
+
+    def record_unchecked_documents(self, site_id: int) -> int:
+        now = utc_now()
+        with self.connection() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO documents (
+                    site_id, url, claimed_type, fiscal_year, title, verdict,
+                    evidence, created_at, updated_at
+                )
+                SELECT l.site_id, l.url, NULL, NULL, l.anchor_text, 'skipped',
+                       ?, ?, ?
+                FROM links l
+                WHERE l.site_id = ? AND l.link_type = 'document'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM documents d
+                      WHERE d.site_id = l.site_id AND d.url = l.url
+                  )
+                """,
+                (UNCHECKED_EVIDENCE, now, now, site_id),
+            )
+            return cur.rowcount
 
     def list_sites(self) -> list[dict[str, Any]]:
         with self.connection() as conn:

@@ -26,6 +26,7 @@ from app.db import Database
 from app.fetch import UnsafeURLError, assert_public_url, registrable_domain
 from app.llm import LlmClient
 from app.resolve import install_dns_fallback_from_env
+from app.score import is_file_link
 from app.urls import normalize_seed_url
 
 DATA_DIR = Path(
@@ -137,6 +138,11 @@ def scrape(req: ScrapeRequest, background: BackgroundTasks) -> dict[str, Any]:
     return {"site_id": site_id, "status": "running", "domain": site_domain}
 
 
+def present_site(site: dict[str, Any]) -> dict[str, Any]:
+    links = [row for row in site["links"] if not is_file_link(row)]
+    return {**site, "links": links}
+
+
 @app.get("/sites")
 def list_sites() -> list[dict[str, Any]]:
     return db.list_sites()
@@ -150,7 +156,7 @@ def get_site(site_id: int) -> dict[str, Any]:
     with _jobs_lock:
         if site_id in _running_sites:
             site["status"] = "running"
-    return site
+    return present_site(site)
 
 
 @app.get("/links")

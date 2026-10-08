@@ -412,3 +412,60 @@ def test_leadership_page_past_the_depth_limit_is_still_reached(db: Database):
         link for link in site["links"] if link["url"].endswith("/business-finance-leadership")
     )
     assert leadership["link_type"] == "contact"
+
+
+def _seed_with_budget_pdf(request: httpx.Request) -> httpx.Response:
+    if request.url.path == "/robots.txt":
+        return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+    html = (
+        '<html><body><a href="/fy2024-budget.pdf">Adopted Budget FY2024</a>'
+        '<a href="/finance/">Finance Department</a></body></html>'
+    )
+    return httpx.Response(200, headers={"content-type": "text/html"}, text=html)
+
+
+def _fail_after_seed(runner: CrawlRunner, seed_url: str) -> None:
+    real_fetch = runner.fetcher.fetch
+
+    def fetch(url: str, *args, **kwargs):
+        if url != seed_url:
+            raise RuntimeError("transient failure")
+        return real_fetch(url, *args, **kwargs)
+
+    runner.fetcher.fetch = fetch
+
+
+def test_mid_crawl_failure_still_backfills_stored_document_links(db: Database):
+    seed_url = "https://example.gov/"
+    runner = _runner(db, _seed_with_budget_pdf)
+    _fail_after_seed(runner, seed_url)
+    site_id = runner.run(seed_url, CrawlConfig(max_pages=5, max_depth=2))
+    runner.close()
+    site = db.get_site(site_id)
+    assert site is not None
+    assert site["status"] == "failed"
+    assert site["error"] == "transient failure"
+    assert any(
+        link["link_type"] == "document" and link["url"].endswith("fy2024-budget.pdf")
+        for link in site["links"]
+    )
+    doc = next(d for d in site["documents"] if d["url"].endswith("fy2024-budget.pdf"))
+    assert doc["verdict"] == "skipped"
+    assert doc["evidence"] == "document link found but not downloaded"
+
+
+def test_failed_backfill_does_not_mask_the_original_error(db: Database, monkeypatch):
+    seed_url = "https://example.gov/"
+    runner = _runner(db, _seed_with_budget_pdf)
+    _fail_after_seed(runner, seed_url)
+
+    def broken_backfill(site_id: int) -> int:
+        raise RuntimeError("backfill exploded")
+
+    monkeypatch.setattr(db, "record_unchecked_documents", broken_backfill)
+    site_id = runner.run(seed_url, CrawlConfig(max_pages=5, max_depth=2))
+    runner.close()
+    site = db.get_site(site_id)
+    assert site is not None
+    assert site["status"] == "failed"
+    assert site["error"] == "transient failure"

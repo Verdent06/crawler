@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -20,6 +21,19 @@ def is_file_url(url: str, extensions: list[str]) -> bool:
         return True
     lowered = url.lower()
     return any(token in lowered for token in _SHAREPOINT_FILES)
+
+
+@lru_cache(maxsize=1)
+def default_document_extensions() -> tuple[str, ...]:
+    with open(DEFAULT_KEYWORDS_PATH, encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    return tuple(e.lower() for e in (config.get("document_extensions") or [".pdf"]))
+
+
+def is_file_link(row: dict[str, Any]) -> bool:
+    if row.get("link_type") == "document":
+        return True
+    return is_file_url(row["url"], list(default_document_extensions()))
 
 
 @dataclass

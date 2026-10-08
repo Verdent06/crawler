@@ -130,7 +130,6 @@ export function ResultsTabs({ site }: Props) {
               aria-label="Filter by link type"
             >
               <option value="all">All types</option>
-              <option value="document">document</option>
               <option value="contact">contact</option>
               <option value="navigation">navigation</option>
             </select>
