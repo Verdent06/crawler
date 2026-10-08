@@ -48,3 +48,27 @@ def test_rescrape_updates_instead_of_duplicating(db: Database):
     assert len(site["links"]) == 1
     assert site["links"][0]["result_score"] == 50
     assert site["links"][0]["anchor_text"] == "Budget FY24 updated"
+
+
+def test_contact_page_link_is_not_downgraded_by_a_later_navigation_row(db: Database):
+    from app.db import CONTACT_PAGE_REASON
+
+    site_id = db.create_or_reset_site("https://example.gov/", "example.gov")
+    url = "https://example.gov/leadership"
+    common = dict(source_page=None, anchor_text="x", follow_score=1, result_score=1, matched_keywords=[])
+    db.upsert_link(site_id, url=url, link_type="contact", reason=CONTACT_PAGE_REASON, **common)
+    db.upsert_link(site_id, url=url, link_type="navigation", reason="matched: finance", **common)
+    site = db.get_site(site_id)
+    assert [link["link_type"] for link in site["links"]] == ["contact"]
+
+
+def test_contact_page_link_is_not_downgraded_by_a_later_navigation_row(db: Database):
+    from app.db import CONTACT_PAGE_REASON
+
+    site_id = db.create_or_reset_site("https://example.gov/", "example.gov")
+    url = "https://example.gov/leadership"
+    common = dict(source_page=None, anchor_text="x", follow_score=1, result_score=1, matched_keywords=[])
+    db.upsert_link(site_id, url=url, link_type="contact", reason=CONTACT_PAGE_REASON, **common)
+    db.upsert_link(site_id, url=url, link_type="navigation", reason="matched: finance", **common)
+    site = db.get_site(site_id)
+    assert [link["link_type"] for link in site["links"]] == ["contact"]

@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import heapq
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlparse
 
-from app.db import Database
+from app.db import CONTACT_PAGE_REASON, Database
 from app.extract import (
     ExtractedContact,
+    clean_contacts,
     extract_contacts,
     extract_links,
+    page_contact_text,
+    page_title,
     page_looks_like_staff,
 )
 from app.fetch import Fetcher, UnsafeURLError, registrable_domain, same_site
@@ -23,6 +27,22 @@ from app.score import KeywordScorer
 logger = logging.getLogger(__name__)
 
 
+def _text_field(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    return text or None
+
+
+def _on_page(value: str, page: str) -> bool:
+    if value.lower() in page.lower():
+        return True
+    digits = re.sub(r"\D", "", value)
+    if len(digits) >= 10 and digits[-10:] in re.sub(r"\D", "", page):
+        return True
+    return False
+
+
 @dataclass(order=True)
 class FrontierItem:
     priority: float
@@ -30,6 +50,13 @@ class FrontierItem:
     url: str = field(compare=False)
     source_page: str | None = field(default=None, compare=False)
     anchor_text: str = field(default="", compare=False)
+
+
+def _finance_page(scorer: KeywordScorer, url: str, html: str) -> bool:
+    score = scorer.score(
+        url=urlparse(url).path, anchor_text=page_title(html)
+    )
+    return score.follow_score >= scorer.result_threshold
 
 
 @dataclass
@@ -196,7 +223,9 @@ class CrawlRunner:
                 except Exception:
                     html = result.body.decode("latin-1", errors="replace")
 
-                if page_looks_like_staff(html, final_url):
+                if page_looks_like_staff(html, final_url) and _finance_page(
+                    scorer, final_url, html
+                ):
                     self._handle_contacts(site_id, final_url, html)
 
                 for link in extract_links(html, final_url):
@@ -311,21 +340,30 @@ class CrawlRunner:
 
     def _handle_contacts(self, site_id: int, url: str, html: str) -> None:
         contacts: list[ExtractedContact] = extract_contacts(html)
+        page_text = page_contact_text(html)
         if self.llm.enabled and len(contacts) < 2:
-            from bs4 import BeautifulSoup
-
-            text = BeautifulSoup(html, "html.parser").get_text("\n", strip=True)
-            for item in self.llm.extract_contacts(text):
+            for item in self.llm.extract_contacts(page_text):
+                email = _text_field(item.get("email"))
+                phone = _text_field(item.get("phone"))
+                if email and not _on_page(email, page_text):
+                    email = None
+                if phone and not _on_page(phone, page_text):
+                    phone = None
+                if not email and not phone:
+                    continue
                 contacts.append(
                     ExtractedContact(
-                        name=item.get("name"),
-                        title=item.get("title"),
-                        email=item.get("email"),
-                        phone=item.get("phone"),
+                        name=_text_field(item.get("name")),
+                        title=_text_field(item.get("title")),
+                        email=email,
+                        phone=phone,
                     )
                 )
+            contacts = clean_contacts(contacts)
 
         for contact in contacts:
+            if not contact.email and not contact.phone:
+                continue
             self.db.upsert_contact(
                 site_id,
                 source_url=url,
@@ -344,7 +382,7 @@ class CrawlRunner:
                     follow_score=20,
                     result_score=40,
                     matched_keywords=["contact"],
-                    reason="extracted finance contact from page",
+                    reason=CONTACT_PAGE_REASON,
                 )
 
     def _handle_document(

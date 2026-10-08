@@ -77,7 +77,7 @@ Each link gets two scores from the URL, anchor text, and nearby heading/list tex
 
 Document links (`.pdf`, `.xlsx`, …) with finance keywords are checked: the first three pages are read (50 MB cap) and labeled `confirmed`, `mismatch`, `unreadable`, or `skipped`.
 
-Contacts are pulled from staff/contact pages when name, title, email, or phone is present. Obfuscated emails like `name [at] city.gov` are supported.
+Contacts are pulled from finance-relevant staff/contact pages (the page's URL path or `<title>` must score as finance). A contact is stored only when it has an email or phone, and a phone-only entry also needs a person's name. Obfuscated emails (`name [at] city.gov`, Cloudflare `email-protection` links) and contact cards embedded as escaped HTML inside page scripts are decoded. A name is only guessed from page text when it fits the email address, so nav labels and sentences are not stored as people.
 
 ```mermaid
 flowchart LR

@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any, Iterator
 
 
+CONTACT_PAGE_REASON = "extracted finance contact from page"
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -229,6 +232,7 @@ class Database:
                     matched_keywords = excluded.matched_keywords,
                     reason = excluded.reason,
                     updated_at = excluded.updated_at
+                WHERE links.reason != ? OR excluded.reason = links.reason
                 """,
                 (
                     site_id,
@@ -242,6 +246,7 @@ class Database:
                     reason,
                     now,
                     now,
+                    CONTACT_PAGE_REASON,
                 ),
             )
 
