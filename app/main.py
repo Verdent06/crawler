@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
@@ -27,6 +27,13 @@ from app.fetch import UnsafeURLError, assert_public_url, registrable_domain
 from app.llm import LlmClient
 from app.resolve import install_dns_fallback_from_env
 from app.score import is_file_link
+from app.security import (
+    DEFAULT_MAX_CONCURRENT_SCRAPES,
+    DEFAULT_RATE_LIMIT_PER_MINUTE,
+    SlidingWindowLimiter,
+    api_key_matches,
+    env_int,
+)
 from app.urls import normalize_seed_url
 
 DATA_DIR = Path(
@@ -68,6 +75,36 @@ app.add_middleware(
 db = Database(DB_PATH)
 _jobs_lock = threading.Lock()
 _running_sites: set[int] = set()
+rate_limiter = SlidingWindowLimiter(
+    env_int("SCRAPE_RATE_LIMIT_PER_MINUTE", DEFAULT_RATE_LIMIT_PER_MINUTE)
+)
+max_concurrent_scrapes = env_int("MAX_CONCURRENT_SCRAPES", DEFAULT_MAX_CONCURRENT_SCRAPES)
+
+
+def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
+    expected = os.environ.get("SCRAPER_API_KEY", "")
+    if expected and not api_key_matches(expected, x_api_key):
+        raise HTTPException(status_code=401, detail="missing or invalid X-API-Key")
+
+
+def enforce_rate_limit(request: Request, _: None = Depends(require_api_key)) -> None:
+    client = request.client.host if request.client else "unknown"
+    wait = rate_limiter.retry_after(client)
+    if wait:
+        raise HTTPException(
+            status_code=429,
+            detail=f"rate limit exceeded; retry in {wait}s",
+            headers={"Retry-After": str(wait)},
+        )
+
+
+def reject_if_at_capacity() -> None:
+    if max_concurrent_scrapes and len(_running_sites) >= max_concurrent_scrapes:
+        raise HTTPException(
+            status_code=503,
+            detail=f"server is busy: {max_concurrent_scrapes} crawls already running; try again shortly",
+            headers={"Retry-After": "30"},
+        )
 
 
 class ScrapeRequest(BaseModel):
@@ -98,7 +135,7 @@ def health() -> dict[str, Any]:
     }
 
 
-@app.post("/scrape")
+@app.post("/scrape", dependencies=[Depends(enforce_rate_limit)])
 def scrape(req: ScrapeRequest, background: BackgroundTasks) -> dict[str, Any]:
     seed = str(req.url)
     try:
@@ -115,6 +152,7 @@ def scrape(req: ScrapeRequest, background: BackgroundTasks) -> dict[str, Any]:
                 "status": "running",
                 "domain": site_domain,
             }
+        reject_if_at_capacity()
         site_id = db.create_or_reset_site(seed, site_domain)
         _running_sites.add(site_id)
 

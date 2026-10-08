@@ -62,6 +62,29 @@ export type ScrapeRequest = {
   max_documents?: number
 }
 
+const STATUS_MESSAGES: Record<number, string> = {
+  401: 'The API rejected the request: missing or invalid API key. Start the dev server with SCRAPER_API_KEY set.',
+  429: 'Too many scrape requests. Wait a moment and try again.',
+  503: 'The server is busy with other crawls. Try again shortly.',
+}
+
+function retryHint(res: Response): string {
+  const seconds = Number(res.headers.get('Retry-After'))
+  return Number.isFinite(seconds) && seconds > 0 ? ` (retry in ${seconds}s)` : ''
+}
+
+async function errorMessage(res: Response): Promise<string> {
+  const known = STATUS_MESSAGES[res.status]
+  if (known) return known + retryHint(res)
+  try {
+    const body = (await res.json()) as { detail?: unknown }
+    if (typeof body.detail === 'string' && body.detail) return body.detail
+  } catch {
+    /* keep statusText */
+  }
+  return res.statusText || `Request failed (${res.status})`
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
     ...init,
@@ -71,16 +94,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   })
-  if (!res.ok) {
-    let detail = res.statusText
-    try {
-      const body = (await res.json()) as { detail?: string }
-      if (body.detail) detail = body.detail
-    } catch {
-      /* keep statusText */
-    }
-    throw new Error(detail || `Request failed (${res.status})`)
-  }
+  if (!res.ok) throw new Error(await errorMessage(res))
   return res.json() as Promise<T>
 }
 

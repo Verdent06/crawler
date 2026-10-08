@@ -51,6 +51,27 @@ npm run dev
 
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api/*` to the FastAPI server. CORS is also enabled for the Vite origin as a backup.
 
+If the API sets `SCRAPER_API_KEY`, start the dev server with the same variable so the Vite proxy adds the `X-API-Key` header (the key stays on the dev-server side and is never put in the browser bundle):
+
+```bash
+SCRAPER_API_KEY=your-shared-secret npm run dev
+```
+
+### Environment variables
+
+Copy [`.env.example`](.env.example) to `.env` (gitignored) for local use. It lists every variable with no values filled in; never commit real keys.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SCRAPER_API_KEY` | unset | When set, `POST /scrape` requires a matching `X-API-Key` header (constant-time compare, `401` otherwise). Unset means no auth, for local dev. Set it on any shared or public deployment. |
+| `SCRAPE_RATE_LIMIT_PER_MINUTE` | `10` | Max `POST /scrape` requests per client IP per rolling minute. `429` with `Retry-After` when exceeded. `0` disables. |
+| `MAX_CONCURRENT_SCRAPES` | `3` | Crawls allowed to run at once. A new crawl past the cap gets `503` with `Retry-After`. `0` disables. |
+| `DNS_FALLBACK` | off | `1`/`true` resolves hostnames through the nameservers in `/etc/resolv.conf` when the OS resolver fails (a macOS stub-resolver workaround). Installed at app startup, process-wide. Leave off in production. SSRF checks are the same either way: every resolved address must be globally routable. |
+| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | unset / Gemini / `gemini-3.5-flash-lite` | Optional model, described below. |
+| `SCRAPER_DB_PATH`, `SCRAPER_DATA_DIR` | `data/scraper.db`, `data/` | Where SQLite and the TLD cache live. |
+
+The rate limit keys on the TCP peer address. Behind a reverse proxy every request looks like the proxy's address, so enforce limits at the proxy or the gateway there; the in-process limiter does not trust `X-Forwarded-For`, which clients can spoof.
+
 Optional model (Gemini by default, any OpenAI-compatible chat API):
 
 ```bash
@@ -129,7 +150,7 @@ erDiagram
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Process health and whether the model API answered |
-| `POST` | `/scrape` | Start a background crawl |
+| `POST` | `/scrape` | Start a background crawl. Needs `X-API-Key` when `SCRAPER_API_KEY` is set; `401` bad key, `429` rate limited, `503` too many crawls running |
 | `GET` | `/sites` | List crawl jobs |
 | `GET` | `/sites/{id}` | Job detail. `links` holds navigation and contact pages only; files (PDF, XLSX, SharePoint) are listed under `documents` |
 | `GET` | `/links` | Query every stored link row, including `type=document` (`domain`, `type`, `min_score`, `q`) |
@@ -139,11 +160,14 @@ Example:
 ```bash
 curl -s -X POST http://127.0.0.1:8000/scrape \
   -H 'content-type: application/json' \
+  -H "X-API-Key: $SCRAPER_API_KEY" \
   -d '{"url":"https://www.a2gov.org/","max_pages":15,"max_depth":3}'
 
 curl -s http://127.0.0.1:8000/sites/1 | python -m json.tool
 curl -s 'http://127.0.0.1:8000/links?q=budget&min_score=20' | python -m json.tool
 ```
+
+Omit the `X-API-Key` header when `SCRAPER_API_KEY` is unset. `GET /health` and the read endpoints are always open. A `429` or `503` response carries a `Retry-After` header in seconds.
 
 Crawl jobs are asynchronous because some sites ask for a multi-second crawl delay. Poll `GET /sites/{id}` until `status` is `completed` or `failed`.
 
@@ -156,6 +180,7 @@ Crawl jobs are asynchronous because some sites ask for a multi-second crawl dela
 - Only `http`/`https`; credentials in URLs are rejected
 - Hostnames are resolved; loopback, private, link-local, and reserved addresses are blocked, including on redirect hops
 - Response bodies capped at 50 MB
+- `POST /scrape` can be gated by `X-API-Key`, rate limited per client, and capped at `MAX_CONCURRENT_SCRAPES` running crawls
 
 ## Tests
 
@@ -188,7 +213,20 @@ Recorded with `scripts/run_live_samples.py` (`max_pages=8`, `max_depth=2`, keywo
 | `https://asu.edu/` | Completed. Frontier preferred `cfo.asu.edu` budget/finance/contact URLs despite a noisy university homepage. |
 | `https://boerneisd.net/` | Completed. Honored `Crawl-delay: 5` and stayed off disallowed paths. Found staff/contact signals; finance PDFs need a deeper or keyword-tuned run. |
 
-## Scaling to millions of pages a day
+## Deploying and scaling
+
+### Public deployment notes
+
+One uvicorn process with SQLite and in-process background tasks is a demo topology. Before exposing it:
+
+- Set `SCRAPER_API_KEY`, terminate TLS in front of the API, and keep `DNS_FALLBACK` off.
+- The key, rate limit, and concurrency cap are per process and held in memory. They reset on restart and are not shared across workers, so run a single worker or move them out (below). Running crawls live inside the process and do not survive a restart.
+- Reads (`/sites`, `/links`) are unauthenticated. Put them behind the same gateway if results are not public.
+- Raw secrets belong in the platform's secret store, not in the image or repo. `.env` is for local use only.
+
+What changes at scale: a gateway or API-key service replaces the shared secret (per-tenant keys, quotas, audit); rate limits and the crawl cap move to Redis or the job queue; crawls run in separate worker processes pulling from a queue instead of FastAPI background tasks; SQLite gives way to Postgres.
+
+### Scaling to millions of pages a day
 
 This submission is single-process SQLite. At ~1M pages/day you need about 12 pages/second on average. The bottleneck is per-domain politeness, not the model.
 
@@ -234,6 +272,7 @@ flowchart LR
 ```
 app/
   main.py          FastAPI routes + CORS
+  security.py      API key check, per-client rate limiter
   resolve.py       Opt-in DNS fallback (DNS_FALLBACK=1)
   crawl.py         Frontier crawl loop
   fetch.py         HTTP, robots, SSRF guards
