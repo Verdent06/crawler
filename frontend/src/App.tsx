@@ -12,6 +12,7 @@ export default function App() {
   const [healthError, setHealthError] = useState<string | null>(null)
   const [site, setSite] = useState<SiteDetail | null>(null)
   const [siteId, setSiteId] = useState<number | null>(null)
+  const [runId, setRunId] = useState(0)
   const [starting, setStarting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const pollRef = useRef<number | null>(null)
@@ -73,7 +74,7 @@ export default function App() {
         pollRef.current = null
       }
     }
-  }, [siteId])
+  }, [siteId, runId])
 
   const running = starting || site?.status === 'running'
 
@@ -88,6 +89,8 @@ export default function App() {
         max_depth: values.max_depth,
       })
       setSiteId(res.site_id)
+      setRunId((current) => current + 1)
+      setSite(await getSite(res.site_id))
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Could not start scrape')
       setSiteId(null)
