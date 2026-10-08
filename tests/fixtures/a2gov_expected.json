@@ -1,0 +1,44 @@
+{
+  "seed": "https://www.a2gov.org",
+  "config": {"max_pages": 12, "max_depth": 2, "max_documents": 8},
+  "fixture": "a2gov",
+  "pages_fetched": [
+    "https://www.a2gov.org/finance-and-administrative-services/treasury/",
+    "https://www.a2gov.org/finance-and-administrative-services/financial-reporting/",
+    "https://www.a2gov.org/finance-and-administrative-services/financial-reporting/archived-financial-reports/",
+    "https://www.a2gov.org/finance-and-administrative-services/guide-to-finance-and-budget/",
+    "https://www.a2gov.org/finance-and-administrative-services/accounting/"
+  ],
+  "links": {
+    "required": [
+      {"url": "https://www.a2gov.org/finance-and-administrative-services/financial-reporting/", "types": ["navigation", "contact"]},
+      {"url": "https://www.a2gov.org/finance-and-administrative-services/financial-reporting/archived-financial-reports/", "types": ["navigation"]},
+      {"url": "https://www.a2gov.org/finance-and-administrative-services/guide-to-finance-and-budget/", "types": ["navigation", "contact"]},
+      {"url": "https://www.a2gov.org/media/je4nrvnr/fy26-budget-book.pdf", "types": ["document"]},
+      {"url": "https://media-001-us.cdn.govstack.com/a2gov-002-us/media/ybnlgsdn/fiscal-year-2022-acfr.pdf", "types": ["document"]}
+    ],
+    "forbidden_substrings": ["public_records_request", "parking", "facebook.com"]
+  },
+  "contacts": {
+    "required": [
+      {"name": "Marti Praschan", "title": "Chief Financial Officer", "email": "mpraschan@a2gov.org", "phone": "734.794.6500"},
+      {"name": "Michael J. Pettigrew", "title": "City Treasurer", "phone": "734.994.2833"},
+      {"name": "Tami Cook", "title": "Accounting Services Manager", "email": "tcook@a2gov.org", "phone": "734.794.6500"},
+      {"email": "assessor@a2gov.org", "phone": "734.794.6530"},
+      {"email": "budget@a2gov.org"}
+    ],
+    "forbidden_names": ["Systems Planning", "Fiscal Year", "Finance Leadership", "Chief Financial"],
+    "forbidden_emails": [],
+    "max_total": 16
+  },
+  "documents": {
+    "required": [
+      {"url": "https://www.a2gov.org/media/je4nrvnr/fy26-budget-book.pdf", "verdict": "confirmed", "claimed_type": "budget", "fiscal_year": "2026"},
+      {"url": "https://media-001-us.cdn.govstack.com/a2gov-002-us/media/swaherth/budget-book-fy25.pdf", "verdict": "confirmed", "claimed_type": "budget", "fiscal_year": "2025"},
+      {"url": "https://media-001-us.cdn.govstack.com/a2gov-002-us/media/dahnpum2/cafr-city-of-ann-arbor-6-30-19.pdf", "verdict": "confirmed", "claimed_type": "acfr", "fiscal_year": "2019"},
+      {"url": "https://media-001-us.cdn.govstack.com/a2gov-002-us/media/ybnlgsdn/fiscal-year-2022-acfr.pdf", "verdict": "skipped", "claimed_type": "acfr", "evidence": "document check cap reached"}
+    ],
+    "confirmed_min": 8,
+    "forbidden_substrings": ["public_records_request"]
+  }
+}

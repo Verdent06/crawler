@@ -1,0 +1,173 @@
+{
+ "https://asu.edu/robots.txt": {
+  "status": 301,
+  "content_type": "text/html; charset=UTF-8",
+  "location": "https://www.asu.edu/robots.txt"
+ },
+ "https://www.asu.edu/robots.txt": {
+  "status": 200,
+  "content_type": "text/plain; charset=UTF-8",
+  "location": null,
+  "file": "207344dc1b89.html"
+ },
+ "https://asu.edu": {
+  "status": 301,
+  "content_type": "text/html; charset=UTF-8",
+  "location": "https://www.asu.edu/"
+ },
+ "https://www.asu.edu/": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "d3d40be9c4ad.html"
+ },
+ "https://search.asu.edu/?search-tabs=web_dir_faculty_staff": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "06271dfa675c.html"
+ },
+ "https://admission.asu.edu/contact/request-info": {
+  "status": 301,
+  "content_type": "text/html; charset=utf-8",
+  "location": "https://admission.asu.edu/future-student-request?plan=&name=&prog=&college=&GraduateType=&source="
+ },
+ "https://admission.asu.edu/future-student-request?plan=&name=&prog=&college=&GraduateType=&source=": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "970e22b3e93e.html"
+ },
+ "https://www.asu.edu/about/contact": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "447c97ac07f8.html"
+ },
+ "https://cfo.asu.edu/applicant": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "ff7cee56c9fc.html"
+ },
+ "https://cfo.asu.edu/contact": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "2a2a8c4b395e.html"
+ },
+ "https://cfo.asu.edu/financial-reports-to-ABOR": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "d490785acd92.html"
+ },
+ "https://cfo.asu.edu/financial-reports": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "fb384b14ca15.html"
+ },
+ "https://www.asu.edu/fs/documents/annual_reports/ASU-2025-Annual-comp-fin-rpt.pdf": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "location": null,
+  "pdf_text": "Annual Comprehensive Financial Report 2025 An Enterprise Fund of the State of Arizona. Year Ended June 30, 2025 An Enterprise Fund of the State of Arizona Prepared by the ASU Financial Services Office Annual Comprehensive Financial Report Year Ended June 30, 2025"
+ },
+ "https://www.asu.edu/fs/documents/annual_reports/ASU-2024-Annual-comp-fin-rpt.pdf": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "location": null,
+  "pdf_text": "Year Ended June 30, 2024 An Enterprise Fund of the State of Arizona. Annual Comprehensive Financial Report 2024 An Enterprise Fund of the State of Arizona Prepared by the ASU Financial Services Office Annual Comprehensive Financial Report Year Ended June 30, 2024"
+ },
+ "https://www.asu.edu/fs/documents/annual_reports/ASU-2023-Annual-comp-fin-rpt.pdf": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "location": null,
+  "pdf_text": "Arizona State University Financial Services University Services Building 1551 South Rural Road PO Box 875812 Tempe, Arizona 85287-5812 480-965-3601 cfo.asu.edu/fs Compiled and edited by the ASU Financial Services Office. \u00a9 2023 Arizona Board of Regents. All rights reserved. Printed in the U.S. Arizona State University vigorously pursues affirmative action and equal opportunity in its employment, activities, and programs. Year Ended June 30, 2023 An Enterprise Fund of the State of Arizona. Annual Comprehensive Financial Report 2023 Photography by: ASU Enterprise Brand Strategy, Business and Finance Communications, FJ Gaylor Photography, Media Relations and Strategic Communications, Greyshed S"
+ },
+ "https://www.asu.edu/fs/documents/annual_reports/ASU-2022-Annual-comp-fin-rpt.pdf": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "location": null,
+  "pdf_text": "Year Ended June 30, 2022 | An Enterprise Fund of the State of Arizona. Annual Comprehensive Financial Report 2022 This page intentionally left blank. An Enterprise Fund of the State of Arizona Prepared by the ASU Financial Services Office Annual Comprehensive Financial Report Year Ended June 30, 2022"
+ },
+ "https://www.asu.edu/fs/documents/annual_reports/ASU-2021-Annual-comp-fin-rpt.pdf": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "location": null,
+  "pdf_text": "Arizona State University Financial Services University Services Building 1551 South Rural Road PO Box 875812 Tempe, Arizona 85287-5812 480-965-3601 cfo.asu.edu/fs Compiled and edited by the ASU Financial Services Office. \u00a9 2021 Arizona Board of Regents. All rights reserved. Printed in the U.S. Arizona State University vigorously pursues affirmative action and equal opportunity in its employment, activities, and programs. Photography by: Andy DeLisle, Jarod Opperman, Jenny Dupuis, Enterprise Marketing Hub. Year Ended June 30, 2021 An Enterprise Fund of the State of Arizona. Annual Comprehensive Financial Report 2021 An Enterprise Fund of the State of Arizona Prepared by the ASU Financial Serv"
+ },
+ "https://www.asu.edu/fs/documents/annual_reports/ASU-2020-Comp-ann-fin-rpt.pdf": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "location": null,
+  "pdf_text": "Arizona State University Financial Services University Services Building 1551 South Rural Road PO Box 875812 Tempe, Arizona 85287-5812 480-965-3601 cfo.asu.edu/fs Compiled and edited by the ASU Financial Services Office. \u00a9 2020 Arizona Board of Regents. All rights reserved. Printed in the U.S. Arizona State University vigorously pursues affirmative action and equal opportunity in its employment, activities, and programs. Photography by: Andy DeLisle, Anya Magnuson, FJ Gaylor, Jarod Opperman, Jenny Dupuis, Laura Sposato Comprehensive Annual Financial Report 2020 Year Ended June 30, 2020 | An Enterprise Fund of the State of Arizona. An Enterprise Fund of the State of Arizona Prepared by the AS"
+ },
+ "https://www.asu.edu/fs/documents/annual_reports/ASU-2019-Comp-ann-fin-rpt.pdf": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "location": null,
+  "pdf_text": "Y ear Ended June 30, 2019 | An Enterprise Fund of the State of Arizona Comprehensive Annual Financial Report 2019 An Enterprise Fund of the State of Arizona Prepared by the ASU Financial Services O\ufb03 ce Comprehensive Annual Financial Report Year Ended June 30, 2019"
+ },
+ "https://www.asu.edu/fs/documents/annual_reports/ASU-2018-Comp-ann-fin-rpt.pdf": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "location": null,
+  "pdf_text": "Y ear Ended June 30, 2018 | An Enterprise Fund of the State of Arizona Comprehensive Annual Financial Report 2018 Front and back cover. Biodesign C is a new multi-functional research facility which will leverage the University\u2019s investment to maximize the opportunities for research growth. Right. Mutated growth patterns in crested cactus have inspired ASU researchers to look for new ways to control cancer. An Enterprise Fund of the State of Arizona Prepared by the ASU Financial Services O\ufb03 ce Comprehensive Annual Financial Report Year Ended June 30, 2018"
+ },
+ "https://cfo.asu.edu/annual-operating-budget": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "45bcf2c68843.html"
+ },
+ "https://cfo.asu.edu/business-finance-leadership": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "0d1ef4ac4895.html"
+ },
+ "https://cfo.asu.edu/finance": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "d2386ed0efef.html"
+ },
+ "https://cfo.asu.edu/financial-operations-training": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "65be8a15d82f.html"
+ },
+ "https://cfo.asu.edu/financial-services-forms": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "5fad03aa58fc.html"
+ },
+ "https://cfo.asu.edu/legislative-reports": {
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "location": null,
+  "file": "9efd272e37ff.html"
+ },
+ "https://azregents.sharepoint.com/robots.txt": {
+  "status": 200,
+  "content_type": "",
+  "location": null,
+  "file": "0fa4310ac3b4.html"
+ },
+ "https://ospb.az.gov/robots.txt": {
+  "status": 200,
+  "content_type": "text/plain",
+  "location": null,
+  "file": "6a7fb67f16be.html"
+ },
+ "https://www.azauditor.gov/robots.txt": {
+  "status": 200,
+  "content_type": "text/plain",
+  "location": null,
+  "file": "6b569426ba83.html"
+ }
+}

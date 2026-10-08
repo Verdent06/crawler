@@ -1,0 +1,59 @@
+{
+  "seed": "https://asu.edu",
+  "config": {"max_pages": 12, "max_depth": 2, "max_documents": 8},
+  "fixture": "asu",
+  "pages_fetched": [
+    "https://cfo.asu.edu/financial-reports",
+    "https://cfo.asu.edu/financial-reports-to-ABOR",
+    "https://cfo.asu.edu/annual-operating-budget",
+    "https://cfo.asu.edu/legislative-reports",
+    "https://cfo.asu.edu/business-finance-leadership"
+  ],
+  "links": {
+    "required": [
+      {"url": "https://cfo.asu.edu/financial-reports", "types": ["navigation", "contact"]},
+      {"url": "https://cfo.asu.edu/financial-reports-to-ABOR", "types": ["navigation"]},
+      {"url": "https://cfo.asu.edu/annual-operating-budget", "types": ["navigation"]},
+      {"url": "https://cfo.asu.edu/legislative-reports", "types": ["navigation"]},
+      {"url": "https://cfo.asu.edu/business-finance-leadership", "types": ["contact"]},
+      {"url": "https://www.asu.edu/fs/documents/annual_reports/ASU-2025-Annual-comp-fin-rpt.pdf", "types": ["document"]},
+      {"url": "https://www.asu.edu/fs/documents/annual_reports/ASU-2017-Comp-ann-fin-rpt.pdf", "types": ["document"]},
+      {"url": "https://azregents.sharepoint.com/:b:/s/ABORPublic/Committee/Board/ET5SQtZwtEtFhxvBhCozU3YBSRdE1mGfXZLXHbLbt_pbIA", "types": ["document"]},
+      {"url": "https://azregents.sharepoint.com/:b:/s/ABORPublic/Committee/Board/EbogOvp7kjRKkGs3-JcNcb0B3aFqSzxlH5GyXSb-06F8CA", "types": ["document"]},
+      {"url": "https://azregents.sharepoint.com/:b:/s/ABORPublic/Committee/Board/IQDqzHYxINVCRIodPTa5Q03nAY1bAil0wGE2sT3teJ6TJn0", "types": ["document"]}
+    ],
+    "forbidden_substrings": ["public_records_request", "parking", "facebook.com"]
+  },
+  "contacts": {
+    "required": [
+      {"name": "Monica McBee", "title": "Executive Assistant", "email": "monica.mcbee@asu.edu", "phone": "480-727-9921"},
+      {"name": "Maryanne Patterson", "title": "Executive Administrative Support Specialist", "email": "maryanne.patterson@asu.edu", "phone": "480-727-9920"},
+      {"name": "Liza del Mundo", "title": "Assistant to Vice President", "email": "liza.delmundo@asu.edu", "phone": "480-965-0456"},
+      {"name": "Maria Pedregon", "title": "Executive Administrative Support Specialist", "email": "maria.pedregon@asu.edu", "phone": "480-727-5384"},
+      {"name": "Sandra Sanz", "title": "Executive Administrative Support Specialist", "email": "sandra.sanz@asu.edu", "phone": "480-727-7739"},
+      {"name": "Kathleen Morehouse", "title": "Executive Assistant", "email": "kathleen.morehouse@asu.edu", "phone": "480-727-7438"},
+      {"name": "Kathleen Coulter", "title": "Executive Administrative Support Specialist", "email": "katcoulter@asu.edu", "phone": "480-965-0771"},
+      {"name": "Michael Baumert", "title": "Associate Vice President and Controller, Financial Services", "phone": "480-965-7889"},
+      {"name": "Rachel Braten", "title": "Director, Financial Services", "phone": "480-965-9288"},
+      {"email": "financialservices@asu.edu"}
+    ],
+    "forbidden_names": ["Finance Leadership", "Chief Financial", "Email Us"],
+    "forbidden_emails": ["unsubfuturestudentcomm@asu.edu", "hresc@asu.edu"],
+    "max_total": 12
+  },
+  "documents": {
+    "required": [
+      {"url": "https://www.asu.edu/fs/documents/annual_reports/ASU-2025-Annual-comp-fin-rpt.pdf", "verdict": "confirmed", "claimed_type": "acfr", "fiscal_year": "2025"},
+      {"url": "https://www.asu.edu/fs/documents/annual_reports/ASU-2024-Annual-comp-fin-rpt.pdf", "verdict": "confirmed", "claimed_type": "acfr", "fiscal_year": "2024"},
+      {"url": "https://www.asu.edu/fs/documents/annual_reports/ASU-2023-Annual-comp-fin-rpt.pdf", "verdict": "confirmed", "claimed_type": "acfr", "fiscal_year": "2023"},
+      {"url": "https://www.asu.edu/fs/documents/annual_reports/ASU-2022-Annual-comp-fin-rpt.pdf", "verdict": "confirmed", "claimed_type": "acfr", "fiscal_year": "2022"},
+      {"url": "https://www.asu.edu/fs/documents/annual_reports/ASU-2021-Annual-comp-fin-rpt.pdf", "verdict": "confirmed", "claimed_type": "acfr", "fiscal_year": "2021"},
+      {"url": "https://www.asu.edu/fs/documents/annual_reports/ASU-2017-Comp-ann-fin-rpt.pdf", "verdict": "skipped", "evidence": "document check cap reached"},
+      {"url": "https://azregents.sharepoint.com/:b:/s/ABORPublic/Committee/Board/ET5SQtZwtEtFhxvBhCozU3YBSRdE1mGfXZLXHbLbt_pbIA", "verdict": "skipped", "claimed_type": "budget", "fiscal_year": "2025", "evidence": "blocked by robots.txt"},
+      {"url": "https://azregents.sharepoint.com/:b:/s/ABORPublic/Committee/Board/EbogOvp7kjRKkGs3-JcNcb0B3aFqSzxlH5GyXSb-06F8CA", "verdict": "skipped", "claimed_type": "budget", "fiscal_year": "2026", "evidence": "blocked by robots.txt"},
+      {"url": "https://azregents.sharepoint.com/:b:/s/ABORPublic/Committee/Board/IQDqzHYxINVCRIodPTa5Q03nAY1bAil0wGE2sT3teJ6TJn0", "verdict": "skipped", "claimed_type": "budget", "fiscal_year": "2027", "evidence": "blocked by robots.txt"}
+    ],
+    "confirmed_min": 8,
+    "forbidden_substrings": ["public_records_request"]
+  }
+}

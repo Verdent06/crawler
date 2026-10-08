@@ -165,12 +165,16 @@ export PYTHONPATH=.
 pytest -q
 ```
 
+Ground-truth replay: `tests/fixtures/sites/{asu,a2gov}` hold every HTTP response (trimmed HTML, robots.txt, short PDF text) from a real crawl with the UI settings (12 pages, depth 2, 8 document checks). `tests/fixtures/{asu,a2gov}_expected.json` list the pages, links, contacts, and documents a person finds on those pages. `tests/test_ground_truth.py` drives the real crawler over the fixtures, offline, and diffs against the expected files.
+
 Live sample sites (network):
 
 ```bash
 python scripts/run_live_samples.py
-# or
-pytest -m live
+pytest -m live                    # includes the live ground-truth diff
+python scripts/diff_live.py       # print actual vs expected (add --llm to use the configured model)
+python scripts/dump_crawl.py https://asu.edu   # fetch order, contacts, documents
+python scripts/record_fixture.py https://asu.edu asu   # refresh a fixture from the live site
 ```
 
 ## Sample site outcomes
@@ -240,6 +244,6 @@ app/
   llm.py           Optional OpenAI-compatible model client
   db.py            SQLite schema and queries
 frontend/          React UI (Vite + TypeScript)
-scripts/run_live_samples.py
-tests/
+scripts/           live samples, live ground-truth diff, crawl dump, fixture recorder
+tests/             unit tests + offline ground-truth replay (tests/fixtures)
 ```
