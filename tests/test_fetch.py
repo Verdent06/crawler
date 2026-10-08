@@ -73,7 +73,7 @@ def test_fetch_caps_oversized_body():
     fetcher.close()
 
 
-def test_robots_redirect_to_localhost_is_ignored_safely():
+def test_robots_redirect_to_localhost_is_ignored_safely(dns_fallback):
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/robots.txt":
             return httpx.Response(

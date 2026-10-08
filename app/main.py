@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import os
 import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncIterator
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +17,7 @@ from app.crawl import CrawlConfig, CrawlRunner
 from app.db import Database
 from app.fetch import UnsafeURLError, assert_public_url, registrable_domain
 from app.llm import LlmClient
+from app.resolve import install_dns_fallback_from_env
 
 DATA_DIR = Path(
     os.environ.get(
@@ -24,7 +26,16 @@ DATA_DIR = Path(
 )
 DB_PATH = Path(os.environ.get("SCRAPER_DB_PATH", DATA_DIR / "scraper.db"))
 
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    install_dns_fallback_from_env()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="High-Value Link Scraper",
     description=(
         "Find finance contacts and ACFR/budget documents on public institution sites. "

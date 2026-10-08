@@ -19,6 +19,17 @@ def clear_llm_credentials(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture()
+def dns_fallback(monkeypatch: pytest.MonkeyPatch):
+    import socket
+
+    monkeypatch.setattr(socket, "getaddrinfo", socket.getaddrinfo)
+    monkeypatch.setenv("DNS_FALLBACK", "1")
+    from app.resolve import install_dns_fallback_from_env
+
+    assert install_dns_fallback_from_env()
+
+
+@pytest.fixture()
 def db(tmp_path: Path) -> Database:
     return Database(tmp_path / "test.db")
 

@@ -36,6 +36,12 @@ export PYTHONPATH=.
 uvicorn app.main:app --reload --port 8000
 ```
 
+**macOS with a broken stub resolver** (Python fails with "cannot resolve host" while `dig` works): start the API with the DNS fallback enabled:
+
+```bash
+DNS_FALLBACK=1 uvicorn app.main:app --reload --port 8000
+```
+
 Terminal 2 — UI:
 
 ```bash
@@ -222,6 +228,7 @@ flowchart LR
 ```
 app/
   main.py          FastAPI routes + CORS
+  resolve.py       Opt-in DNS fallback (DNS_FALLBACK=1)
   crawl.py         Frontier crawl loop
   fetch.py         HTTP, robots, SSRF guards
   score.py         Keyword scoring

@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 from app.crawl import CrawlConfig, CrawlRunner
 from app.db import Database
 from app.llm import LlmClient
+from app.resolve import install_dns_fallback_from_env
 
 SAMPLES = [
     "https://www.a2gov.org/",
@@ -53,6 +54,7 @@ def summarize(site: dict) -> dict:
 
 
 def main() -> int:
+    install_dns_fallback_from_env()
     out_dir = ROOT / "data"
     out_dir.mkdir(parents=True, exist_ok=True)
     db = Database(out_dir / "live_samples.db")
